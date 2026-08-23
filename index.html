@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Painel de monitoramento da Horta Inteligente: umidade, luminosidade, irrigação e conexão com o Arduino."
+    />
+    <meta name="theme-color" content="#07110f" />
+    <title>Horta Inteligente | Painel de monitoramento</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230f3026'/%3E%3Cpath d='M32 51V30M32 38C21 38 15 31 15 20c11 0 17 7 17 18ZM32 30c0-11 7-17 18-17 0 11-7 17-18 17Z' fill='none' stroke='%236ee7a8' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="estilos.css" />
+  </head>
+
+  <body>
+    <a class="atalho-conteudo" href="#conteudo-principal">Ir para o conteúdo</a>
+
+    <div class="cenario-fundo" aria-hidden="true">
+      <span class="brilho-fundo brilho-fundo--superior"></span>
+      <span class="brilho-fundo brilho-fundo--inferior"></span>
+      <span class="grade-fundo"></span>
+    </div>
+
+    <header class="cabecalho-aplicacao">
+      <div class="limite-conteudo cabecalho-conteudo">
+        <div class="marca">
+          <div class="marca-simbolo" aria-hidden="true">
+            <svg viewBox="0 0 64 64">
+              <rect width="64" height="64" rx="16" fill="#0f3026" stroke="none" />
+              <path
+                d="M32 51V30M32 38C21 38 15 31 15 20c11 0 17 7 17 18ZM32 30c0-11 7-17 18-17 0 11-7 17-18 17Z"
+                fill="none"
+                stroke="#6ee7a8"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </div>
+          <div>
+            <h1>Horta Inteligente</h1>
+            <p>Projeto Integrador<span aria-hidden="true">•</span> Estação de cultivo</p>
+          </div>
+        </div>
+
+        <div class="acoes-cabecalho">
+          <div class="selo-fonte" id="selo-fonte-dados" title="Fonte usada pelo painel">
+            <span class="selo-fonte-icone" id="sigla-fonte-dados" aria-hidden="true">SIM</span>
+            <span>
+              <small>Fonte de dados</small>
+              <strong id="nome-fonte-dados">Simulador ativo</strong>
+            </span>
+          </div>
+
+          <div class="estado-cabecalho" id="estado-cabecalho">
+            <span class="ponto-estado" aria-hidden="true"></span>
+            <span>
+              <small>Sistema</small>
+              <strong id="texto-estado-cabecalho">Inicializando</strong>
+            </span>
+          </div>
+
+          <button
+            class="botao-controle"
+            id="botao-pausar"
+            type="button"
+            aria-pressed="false"
+            aria-label="Pausar atualização dos dados"
+          >
+            <svg class="icone-pausar" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 5v14M16 5v14" />
+            </svg>
+            <svg class="icone-retomar" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m8 5 11 7-11 7V5Z" />
+            </svg>
+            <span id="texto-botao-pausar">Pausar</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="limite-conteudo conteudo-principal" id="conteudo-principal">
+      <section class="abertura-painel" aria-labelledby="titulo-painel">
+        <div>
+          <p class="sobretitulo"><span></span> Monitoramento ambiental</p>
+          <h2 id="titulo-painel">Cultivo sob controle, em cada leitura.</h2>
+          <p class="descricao-painel" id="resumo-painel">
+            Preparando os sensores e organizando a primeira leitura da horta.
+          </p>
+        </div>
+
+        <div class="carimbo-atualizacao">
+          <span class="icone-atividade" aria-hidden="true">
+            <i></i>
+            <i></i>
+            <i></i>
+          </span>
+          <span>
+            <small>Última atualização</small>
+            <strong id="tempo-relativo">Aguardando dados</strong>
+          </span>
+        </div>
+      </section>
+
+      <div
+        class="aviso-sistema"
+        id="aviso-sistema"
+        role="status"
+        aria-live="polite"
+        hidden
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 8v5M12 17.01l.01-.011" />
+          <path d="M10.3 3.75 2.4 17.5A2 2 0 0 0 4.13 20h15.74a2 2 0 0 0 1.73-2.5L13.7 3.75a2 2 0 0 0-3.4 0Z" />
+        </svg>
+        <span id="texto-aviso-sistema"></span>
+      </div>
+
+      <section class="grade-painel" aria-label="Indicadores da horta">
+        <article class="cartao cartao-umidade">
+          <div class="ornamento-cartao" aria-hidden="true"></div>
+          <header class="cabecalho-cartao">
+            <div class="titulo-cartao">
+              <span class="icone-cartao icone-cartao--verde" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 3S5.5 10.1 5.5 15.2a6.5 6.5 0 0 0 13 0C18.5 10.1 12 3 12 3Z" />
+                  <path d="M9 16.2a3 3 0 0 0 3 2.8" />
+                </svg>
+              </span>
+              <span>
+                <small>Sensor de umidade</small>
+                <h3>Umidade do solo</h3>
+              </span>
+            </div>
+            <span class="etiqueta-condicao" id="etiqueta-umidade">
+              <i aria-hidden="true"></i>
+              <span id="texto-etiqueta-umidade">Analisando</span>
+            </span>
+          </header>
+
+          <div class="conteudo-umidade">
+            <div
+              class="medidor-circular"
+              id="medidor-umidade"
+              role="progressbar"
+              aria-label="Umidade do solo"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="0"
+              style="--valor-medidor: 0"
+            >
+              <div class="circulo-medidor">
+                <svg class="folha-medidor" viewBox="0 0 28 28" aria-hidden="true">
+                  <path d="M23 4C12.2 4.2 5.7 8.6 5.2 16.1c-.3 4.4 3.1 7.6 7.5 7.3C20.1 22.8 24 15.7 23 4Z" />
+                  <path d="M5 24c3.4-6.6 7.8-10.3 13.8-13" />
+                </svg>
+                <span class="valor-medidor">
+                  <strong id="valor-umidade">--</strong><small>%</small>
+                </span>
+                <span class="legenda-medidor">nível atual</span>
+              </div>
+            </div>
+
+            <div class="leitura-umidade">
+              <p class="chamada-condicao" id="chamada-umidade">Aguardando a primeira leitura</p>
+              <p class="explicacao-condicao" id="explicacao-umidade">
+                Assim que os dados chegarem, você verá aqui uma interpretação das condições do solo.
+              </p>
+
+              <dl class="detalhes-umidade">
+                <div>
+                  <dt>Valor bruto do sensor</dt>
+                  <dd><strong id="valor-bruto-sensor">----</strong><span> / 1023</span></dd>
+                </div>
+                <div>
+                  <dt>Faixa de conforto</dt>
+                  <dd><strong>45–72</strong><span>%</span></dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+
+          <div class="escala-umidade">
+            <div class="rotulos-escala" aria-hidden="true">
+              <span>Seco</span>
+              <span>Ideal</span>
+              <span>Úmido</span>
+            </div>
+            <div class="trilho-umidade" aria-hidden="true">
+              <span class="faixa-seca"></span>
+              <span class="faixa-ideal"></span>
+              <span class="faixa-umida"></span>
+              <i class="marcador-umidade" id="marcador-umidade"></i>
+            </div>
+          </div>
+        </article>
+
+        <article class="cartao cartao-automacao">
+          <header class="cabecalho-cartao">
+            <div>
+              <p class="rotulo-cartao">Controle automático</p>
+              <h3>Atuadores</h3>
+            </div>
+            <span class="selo-automatico">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.64 5.64l2.12 2.12M16.24 16.24l2.12 2.12M18.36 5.64l-2.12 2.12M7.76 16.24l-2.12 2.12" />
+                <circle cx="12" cy="12" r="3.5" />
+              </svg>
+              Automático
+            </span>
+          </header>
+
+          <div class="lista-atuadores">
+            <section
+              class="atuador"
+              id="atuador-bomba"
+              data-estado="desligado"
+              role="group"
+              aria-labelledby="titulo-bomba estado-bomba"
+            >
+              <span class="visual-atuador visual-atuador--bomba" aria-hidden="true">
+                <svg viewBox="0 0 32 32">
+                  <path d="M7 12.5h13a5 5 0 0 1 5 5v7H7v-12Z" />
+                  <path d="M11 12.5V9a3 3 0 0 1 3-3h4M25 19h3v-5h-5" />
+                  <circle cx="13" cy="19" r="3.2" />
+                  <path class="gota-bomba" d="M27.8 24.5s-2.3 2.6-2.3 4.2a2.3 2.3 0 0 0 4.6 0c0-1.6-2.3-4.2-2.3-4.2Z" />
+                </svg>
+              </span>
+              <span class="texto-atuador">
+                <small id="titulo-bomba">Bomba de irrigação</small>
+                <strong id="estado-bomba" role="status" aria-atomic="true">Aguardando</strong>
+                <span id="descricao-bomba">Verificando umidade do solo</span>
+              </span>
+              <span class="chave-estado" aria-hidden="true"><i></i></span>
+            </section>
+
+            <section
+              class="atuador"
+              id="atuador-iluminacao"
+              data-estado="desligado"
+              role="group"
+              aria-labelledby="titulo-iluminacao estado-iluminacao"
+            >
+              <span class="visual-atuador visual-atuador--luz" aria-hidden="true">
+                <svg viewBox="0 0 32 32">
+                  <path d="M22.2 20.8c2.3-1.8 3.8-4.6 3.8-7.8A10 10 0 0 0 6 13c0 3.2 1.5 6 3.8 7.8 1.2.9 1.7 1.8 1.7 3.2h9c0-1.4.5-2.3 1.7-3.2Z" />
+                  <path d="M12 27h8M13.5 30h5M16 4V1M5.4 8 3 6.5M26.6 8 29 6.5" />
+                </svg>
+              </span>
+              <span class="texto-atuador">
+                <small id="titulo-iluminacao">Iluminação auxiliar</small>
+                <strong id="estado-iluminacao" role="status" aria-atomic="true">Aguardando</strong>
+                <span id="descricao-iluminacao">Analisando luz ambiente</span>
+              </span>
+              <span class="chave-estado" aria-hidden="true"><i></i></span>
+            </section>
+          </div>
+
+          <footer class="rodape-automacao">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+            </svg>
+            <span>As decisões seguem os limites configurados na fonte de dados.</span>
+          </footer>
+        </article>
+
+        <article class="cartao cartao-luminosidade">
+          <header class="cabecalho-cartao">
+            <div class="titulo-cartao">
+              <span class="icone-cartao icone-cartao--amarelo" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="4" />
+                  <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42" />
+                </svg>
+              </span>
+              <span>
+                <small>Ambiente</small>
+                <h3>Luminosidade</h3>
+              </span>
+            </div>
+            <span class="indicador-tendencia" id="tendencia-luminosidade">Estável</span>
+          </header>
+
+          <div class="valor-luminosidade">
+            <span><strong id="valor-luminosidade">--</strong><small>%</small></span>
+            <p><strong id="valor-lux">-----</strong> lux</p>
+          </div>
+
+          <div
+            class="barra-progresso"
+            id="barra-luminosidade"
+            role="progressbar"
+            aria-label="Nível de luminosidade"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+          >
+            <span id="preenchimento-luminosidade"></span>
+          </div>
+          <div class="legenda-progresso">
+            <span>Baixa</span><span>Confortável</span><span>Intensa</span>
+          </div>
+          <p class="leitura-contextual" id="leitura-luminosidade">Aguardando leitura do ambiente.</p>
+        </article>
+
+        <article class="cartao cartao-arduino" id="cartao-arduino" data-conexao="conectando">
+          <header class="cabecalho-cartao">
+            <div>
+              <p class="rotulo-cartao">Dispositivo</p>
+              <h3>Status do Arduino</h3>
+            </div>
+            <span class="etiqueta-conexao" id="etiqueta-conexao">
+              <i aria-hidden="true"></i>
+              <span id="estado-arduino" role="status" aria-atomic="true">Conectando</span>
+            </span>
+          </header>
+
+          <div class="corpo-arduino">
+            <div class="placa-arduino" aria-hidden="true">
+              <span class="porta-usb"></span>
+              <span class="microcontrolador"></span>
+              <span class="pino pino--um"></span>
+              <span class="pino pino--dois"></span>
+              <span class="pino pino--tres"></span>
+              <span class="led-placa"></span>
+              <svg viewBox="0 0 120 72">
+                <path d="M18 19h23v13h20M61 32h20v18h22M28 53h22V41h13" />
+                <circle cx="18" cy="19" r="2" />
+                <circle cx="103" cy="50" r="2" />
+                <circle cx="28" cy="53" r="2" />
+              </svg>
+            </div>
+
+            <dl class="dados-conexao">
+              <div>
+                <dt>Porta</dt>
+                <dd id="porta-arduino">--</dd>
+              </div>
+              <div>
+                <dt>Transmissão</dt>
+                <dd id="transmissao-arduino">Aguardando</dd>
+              </div>
+            </dl>
+          </div>
+        </article>
+
+        <article class="cartao cartao-atualizacao">
+          <header class="cabecalho-cartao">
+            <div class="titulo-cartao">
+              <span class="icone-cartao icone-cartao--azul" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v5l3 2" />
+                </svg>
+              </span>
+              <span>
+                <small>Sincronização</small>
+                <h3>Última atualização</h3>
+              </span>
+            </div>
+          </header>
+
+          <div class="horario-atualizacao">
+            <time id="horario-atualizacao">--:--:--</time>
+            <span id="data-atualizacao">Aguardando dados</span>
+          </div>
+
+          <div class="linha-leitura">
+            <span class="pulso-leitura" aria-hidden="true"></span>
+            <span>Leitura <strong id="numero-leitura">#----</strong></span>
+            <small id="intervalo-leitura">a cada 4 s</small>
+          </div>
+        </article>
+
+        <article class="cartao cartao-historico">
+          <header class="cabecalho-cartao">
+            <div>
+              <p class="rotulo-cartao">Últimas leituras</p>
+              <h3>Comportamento da umidade</h3>
+            </div>
+            <div class="legenda-grafico">
+              <span><i></i> Umidade</span>
+              <strong id="variacao-umidade">0,0%</strong>
+            </div>
+          </header>
+
+          <div class="grafico-historico">
+            <div class="eixo-grafico" aria-hidden="true">
+              <span>100%</span><span>50%</span><span>0%</span>
+            </div>
+            <svg
+              id="grafico-umidade"
+              viewBox="0 0 720 190"
+              preserveAspectRatio="none"
+              role="img"
+              aria-label="Histórico recente da umidade do solo"
+            >
+              <defs>
+                <linearGradient id="gradiente-historico" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#6ee7a8" stop-opacity="0.3" />
+                  <stop offset="100%" stop-color="#6ee7a8" stop-opacity="0" />
+                </linearGradient>
+                <filter id="brilho-linha" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="3" result="desfoque" />
+                  <feMerge>
+                    <feMergeNode in="desfoque" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+              <g class="linhas-grade-grafico" aria-hidden="true">
+                <path d="M0 20H720" />
+                <path d="M0 95H720" />
+                <path d="M0 170H720" />
+                <path d="M120 0V180M240 0V180M360 0V180M480 0V180M600 0V180" />
+              </g>
+              <path id="area-historico" class="area-historico" d="" />
+              <polyline id="linha-historico" class="linha-historico" points="" />
+              <circle id="ponto-historico" class="ponto-historico" cx="0" cy="0" r="5" />
+            </svg>
+            <div class="rotulos-tempo-grafico" aria-hidden="true">
+              <span>Leituras anteriores</span><span>Agora</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="cartao cartao-fluxo">
+          <header class="cabecalho-cartao">
+            <div>
+              <p class="rotulo-cartao">Arquitetura preparada</p>
+              <h3>Fluxo dos dados</h3>
+            </div>
+            <span class="etiqueta-fluxo">Em execução</span>
+          </header>
+
+          <div
+            class="fluxo-dados"
+            id="fluxo-dados"
+            aria-label="Simulador envia dados da horta para a interface"
+          >
+            <div class="no-fluxo no-fluxo--ativo">
+              <span aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M8 5.5 3 12l5 6.5M16 5.5l5 6.5-5 6.5M14 3l-4 18" />
+                </svg>
+              </span>
+              <p><small>Fonte atual</small><strong id="nome-fonte-fluxo">Simulador</strong></p>
+            </div>
+            <span class="conector-fluxo" aria-hidden="true"><i></i></span>
+            <div class="no-fluxo">
+              <span aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" />
+                </svg>
+              </span>
+              <p><small>Contrato</small><strong>Dados da horta</strong></p>
+            </div>
+            <span class="conector-fluxo" aria-hidden="true"><i></i></span>
+            <div class="no-fluxo">
+              <span aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <rect x="3" y="4" width="18" height="13" rx="2" />
+                  <path d="M8 21h8M12 17v4" />
+                </svg>
+              </span>
+              <p><small>Destino</small><strong>Interface</strong></p>
+            </div>
+          </div>
+
+          <p class="nota-fluxo" id="nota-fonte-dados">
+            A fonte poderá ser trocada pelo Arduino Serial sem alterar os cartões do painel.
+          </p>
+        </article>
+      </section>
+    </main>
+
+    <footer class="rodape-aplicacao limite-conteudo">
+      <p><span aria-hidden="true"></span> Horta Inteligente <strong>•</strong> monitoramento local</p>
+      <p id="texto-fonte-rodape">Dados simulados para desenvolvimento</p>
+    </footer>
+
+    <script src="simulador.js"></script>
+    <script src="principal.js"></script>
+  </body>
+</html>

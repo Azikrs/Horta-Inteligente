@@ -1,0 +1,39 @@
+{
+  "name": "horta-inteligente",
+  "productName": "Horta Inteligente",
+  "version": "1.0.2",
+  "description": "Aplicativo desktop para monitoramento da Horta Inteligente.",
+  "main": "aplicativo.js",
+  "scripts": {
+    "start": "electron-forge start",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Azikrs/Horta-Inteligente.git"
+  },
+  "keywords": [],
+  "author": "Equipe Horta Inteligente",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Azikrs/Horta-Inteligente/issues"
+  },
+  "homepage": "https://github.com/Azikrs/Horta-Inteligente#readme",
+  "devDependencies": {
+    "@electron-forge/cli": "^7.11.2",
+    "@electron-forge/maker-deb": "^7.11.2",
+    "@electron-forge/maker-rpm": "^7.11.2",
+    "@electron-forge/maker-squirrel": "^7.11.2",
+    "@electron-forge/maker-zip": "^7.11.2",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.11.2",
+    "@electron-forge/plugin-fuses": "^7.11.2",
+    "@electron/fuses": "^1.8.0",
+    "electron": "^43.4.1"
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.1"
+  }
+}
