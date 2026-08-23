@@ -211,7 +211,17 @@ function criarSimuladorHorta({ intervaloAtualizacao = 4000 } = {}) {
     return simulacaoPausada;
   }
 
-  return { iniciar, pausar, retomar, parar, estaPausado };
+  // Metadados simples permitem que a abertura identifique claramente este modo
+  // como demonstração, sem dar a impressão de que há um Arduino físico ativo.
+  return {
+    tipoFonte: "simulador",
+    nomeFonte: "Simulador local",
+    iniciar,
+    pausar,
+    retomar,
+    parar,
+    estaPausado,
+  };
 }
 
 /*

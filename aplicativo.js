@@ -20,6 +20,9 @@ function criarJanelaPrincipal() {
     minHeight: 600,
     center: true,
     resizable: true,
+    // Abre em tela cheia real, cobrindo inclusive a barra de tarefas do Windows.
+    // Não utiliza modo quiosque: o usuário ainda pode fechar normalmente com Alt + F4.
+    fullscreen: true,
     autoHideMenuBar: true,
     backgroundColor: "#07110f",
     icon: caminhoIcone,

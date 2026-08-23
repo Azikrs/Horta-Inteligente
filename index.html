@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <meta
       name="description"
       content="Painel de monitoramento da Horta Inteligente: umidade, luminosidade, irrigação e conexão com o Arduino."
     />
@@ -16,7 +20,146 @@
     <link rel="stylesheet" href="estilos.css" />
   </head>
 
-  <body>
+  <body class="inicializacao-ativa">
+    <section
+      class="tela-inicializacao"
+      id="tela-inicializacao"
+      data-estado="iniciando"
+      data-etapa="1"
+      aria-busy="true"
+      aria-labelledby="titulo-inicializacao"
+      aria-describedby="descricao-inicializacao"
+    >
+      <div class="ambiente-inicializacao" aria-hidden="true">
+        <span class="halo-inicializacao halo-inicializacao--verde"></span>
+        <span class="halo-inicializacao halo-inicializacao--azul"></span>
+        <span class="grade-inicializacao"></span>
+        <span class="varredura-inicializacao"></span>
+
+        <svg class="circuitos-inicializacao" viewBox="0 0 1600 900" preserveAspectRatio="none">
+          <g class="trilhas-circuito trilhas-circuito--primarias">
+            <path d="M-40 172h236l58 58h206l76 76h298" />
+            <path d="M1640 132h-238l-66 66h-136l-58 58H912" />
+            <path d="M-20 690h272l82-82h202l72-72h186" />
+            <path d="M1620 716h-250l-82-82h-164l-76-76H892" />
+          </g>
+          <g class="trilhas-circuito trilhas-circuito--secundarias">
+            <path d="M122 0v116l74 74" />
+            <path d="M410 900V770l82-82" />
+            <path d="M1378 0v126l-58 58" />
+            <path d="M1486 900V756l-74-74" />
+          </g>
+          <g class="nos-circuito">
+            <circle cx="254" cy="230" r="5" />
+            <circle cx="536" cy="306" r="5" />
+            <circle cx="1336" cy="198" r="5" />
+            <circle cx="334" cy="608" r="5" />
+            <circle cx="1288" cy="634" r="5" />
+            <circle cx="1048" cy="558" r="5" />
+          </g>
+        </svg>
+
+        <div class="particulas-inicializacao">
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+      </div>
+
+      <header class="topo-inicializacao">
+        <div class="assinatura-inicializacao">
+          <span class="simbolo-inicializacao" aria-hidden="true">
+            <svg viewBox="0 0 64 64">
+              <path
+                d="M32 51V30M32 38C21 38 15 31 15 20c11 0 17 7 17 18ZM32 30c0-11 7-17 18-17 0 11-7 17-18 17Z"
+              />
+            </svg>
+          </span>
+          <span><strong>INICIALIZANDO</strong><small>/ SISTEMA 01</small></span>
+        </div>
+
+        <div class="metadados-inicializacao">
+          <span><i></i> SISTEMA LOCAL</span>
+          <span>CASEMOD / CULTIVO</span>
+          <span class="modo-inicializacao" id="modo-inicializacao">FONTE EM ANÁLISE</span>
+        </div>
+      </header>
+
+      <div class="corpo-inicializacao">
+        <div class="apresentacao-inicializacao">
+          <p class="sobretitulo-inicializacao">
+            <span>01</span>
+            Estação automatizada de cultivo
+          </p>
+
+          <h1 class="titulo-inicializacao" id="titulo-inicializacao" aria-label="Horta Inteligente">
+            <span class="mascara-palavra"><i>HORTA</i></span>
+            <span class="mascara-palavra mascara-palavra--recuada"><i>INTELIGENTE</i></span>
+          </h1>
+
+          <div class="apoio-inicializacao">
+            <p>Natureza monitorada.<br />Decisões automatizadas.</p>
+            <span class="coordenadas-inicializacao">S 23°32' / W 46°38'</span>
+          </div>
+        </div>
+
+        <div class="nucleo-inicializacao" aria-hidden="true">
+          <span class="orbita-nucleo orbita-nucleo--externa"><i></i><i></i></span>
+          <span class="orbita-nucleo orbita-nucleo--media"><i></i></span>
+          <span class="orbita-nucleo orbita-nucleo--interna"></span>
+          <span class="mira-nucleo mira-nucleo--horizontal"></span>
+          <span class="mira-nucleo mira-nucleo--vertical"></span>
+          <span class="onda-nucleo"></span>
+
+          <div class="centro-nucleo">
+            <svg viewBox="0 0 128 128">
+              <path
+                class="folha-nucleo"
+                d="M64 105V58M64 77C39 77 26 61 26 35c25 0 38 16 38 42ZM64 58c0-25 16-38 42-38 0 25-16 38-42 38Z"
+              />
+              <path class="energia-nucleo" d="M64 105V58M64 77 42 53M64 58l22-20" />
+            </svg>
+          </div>
+
+          <span class="rotulo-nucleo rotulo-nucleo--superior">BIO / DIGITAL</span>
+          <span class="rotulo-nucleo rotulo-nucleo--inferior">SINAL 00.00</span>
+        </div>
+      </div>
+
+      <footer class="rodape-inicializacao">
+        <div class="bloco-estado-inicializacao">
+          <span class="numero-etapa" id="numero-etapa-inicializacao" aria-hidden="true">01 / 04</span>
+          <div
+            class="mensagem-inicializacao"
+            id="mensagem-inicializacao"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            <small id="rotulo-etapa-inicializacao">Preparação do sistema</small>
+            <strong id="estado-inicializacao">INICIANDO</strong>
+            <p id="descricao-inicializacao">Preparando a interface e os módulos locais...</p>
+          </div>
+        </div>
+
+        <div class="progresso-inicializacao" aria-hidden="true">
+          <span><i></i></span>
+          <span><i></i></span>
+          <span><i></i></span>
+          <span><i></i></span>
+        </div>
+
+        <div class="telemetria-inicializacao" aria-hidden="true">
+          <span><small>COMUNICAÇÃO</small><strong id="comunicacao-inicializacao">VERIFICANDO</strong></span>
+          <span><small>DADOS DO CULTIVO</small><strong id="dados-inicializacao">AGUARDANDO</strong></span>
+          <span class="atividade-inicializacao"><i></i><i></i><i></i><i></i><i></i></span>
+        </div>
+      </footer>
+
+      <div class="transicao-inicializacao" aria-hidden="true">
+        <span></span><span></span><span></span><span></span>
+      </div>
+    </section>
+
+    <div class="painel-aplicacao" id="painel-aplicacao" hidden inert aria-hidden="true">
     <a class="atalho-conteudo" href="#conteudo-principal">Ir para o conteúdo</a>
 
     <div class="cenario-fundo" aria-hidden="true">
@@ -482,8 +625,10 @@
       <p><span aria-hidden="true"></span> Horta Inteligente <strong>•</strong> monitoramento local</p>
       <p id="texto-fonte-rodape">Dados simulados para desenvolvimento</p>
     </footer>
+    </div>
 
     <script src="simulador.js"></script>
+    <script src="inicializacao.js"></script>
     <script src="principal.js"></script>
   </body>
 </html>

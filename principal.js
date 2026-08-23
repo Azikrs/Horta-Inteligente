@@ -96,8 +96,12 @@ function converterNumero(valor) {
 
 function normalizarBooleano(valor) {
   if (typeof valor === "boolean") return valor;
-  if (valor === 1 || valor === "1" || valor === "true") return true;
-  if (valor === 0 || valor === "0" || valor === "false") return false;
+  if (valor === 1) return true;
+  if (valor === 0) return false;
+
+  const texto = typeof valor === "string" ? valor.trim().toLowerCase() : "";
+  if (["1", "true", "on", "ligado", "ligada"].includes(texto)) return true;
+  if (["0", "false", "off", "desligado", "desligada"].includes(texto)) return false;
   return null;
 }
 
@@ -123,7 +127,7 @@ function normalizarEstadoArduino(estadoRecebido) {
   return {
     conexao,
     porta: typeof estado.porta === "string" && estado.porta.trim() ? estado.porta.trim() : "Não informada",
-    recebendoDados: Boolean(estado.recebendoDados),
+    recebendoDados: normalizarBooleano(estado.recebendoDados) ?? false,
   };
 }
 
@@ -154,6 +158,61 @@ function normalizarDadosHorta(dadosRecebidos) {
     intervaloAtualizacao: converterNumero(dados.intervaloAtualizacao),
     fonteDados: typeof dados.fonteDados === "string" ? dados.fonteDados : "desconhecida",
     historicoUmidade: historicoRecebido,
+  };
+}
+
+/**
+ * Confere o contrato mínimo do pacote antes de qualquer normalização. Isso é
+ * importante porque limitar automaticamente um valor inválido (por exemplo,
+ * transformar 180% em 100%) não pode ser confundido com uma leitura real.
+ *
+ * A futura leitura Serial deverá transformar uma mensagem completa como
+ * `UMIDADE:63;BRUTO:412;BOMBA:OFF;LUZ:72;LUX:18000;ILUMINACAO:OFF`
+ * neste mesmo objeto antes de chegar aqui.
+ */
+function leituraDaHortaValida(dadosRecebidos) {
+  if (!dadosRecebidos || typeof dadosRecebidos !== "object" || Array.isArray(dadosRecebidos)) {
+    return false;
+  }
+
+  const umidadeSolo = converterNumero(dadosRecebidos.umidadeSolo);
+  const valorBrutoSensor = converterNumero(dadosRecebidos.valorBrutoSensor);
+  const luminosidade = converterNumero(dadosRecebidos.luminosidade);
+  const luminosidadeLux = converterNumero(dadosRecebidos.luminosidadeLux);
+  const bombaLigada = normalizarBooleano(dadosRecebidos.bombaLigada);
+  const iluminacaoLigada = normalizarBooleano(dadosRecebidos.iluminacaoLigada);
+
+  return umidadeSolo !== null
+    && umidadeSolo >= 0
+    && umidadeSolo <= 100
+    && valorBrutoSensor !== null
+    && valorBrutoSensor >= 0
+    && valorBrutoSensor <= 1023
+    && luminosidade !== null
+    && luminosidade >= 0
+    && luminosidade <= 100
+    && luminosidadeLux !== null
+    && luminosidadeLux >= 0
+    && bombaLigada !== null
+    && iluminacaoLigada !== null;
+}
+
+// Uma mensagem válida comprova a conexão, mesmo que a fonte ainda não tenha
+// enviado metadados como nome da porta ou horário da leitura.
+function prepararLeituraConfirmada(dadosRecebidos) {
+  const estadoRecebido = dadosRecebidos.estadoArduino;
+  const detalhesArduino = estadoRecebido && typeof estadoRecebido === "object"
+    ? estadoRecebido
+    : {};
+
+  return {
+    ...dadosRecebidos,
+    ultimaAtualizacao: normalizarData(dadosRecebidos.ultimaAtualizacao) ?? new Date(),
+    estadoArduino: {
+      ...detalhesArduino,
+      conexao: "conectado",
+      recebendoDados: true,
+    },
   };
 }
 
@@ -529,7 +588,7 @@ function atualizarInterface(dadosRecebidos) {
     && dataUltimaRenderizacao
     && dadosHorta.ultimaAtualizacao < dataUltimaRenderizacao
   ) {
-    return;
+    return false;
   }
 
   dadosAtuais = dadosHorta;
@@ -555,6 +614,39 @@ function atualizarInterface(dadosRecebidos) {
   }
 
   atualizarEstadoTemporal();
+  return true;
+}
+
+/**
+ * Ponto único de entrada dos dados vindos de qualquer fonte. A interface não
+ * chama o simulador diretamente: hoje ele entrega o objeto aqui e, no futuro,
+ * a comunicação Serial entregará exatamente o mesmo formato.
+ */
+function receberLeituraDaFonte(dadosRecebidos) {
+  const inicializacao = escopoAplicacao.HortaInteligente?.inicializacao;
+
+  // A chegada de bytes ou de um pacote candidato permite mostrar sincronização,
+  // mas ainda não autoriza a abertura da interface.
+  inicializacao?.informarEstadoDaFonte("sincronizando");
+
+  if (!leituraDaHortaValida(dadosRecebidos)) {
+    return false;
+  }
+
+  const leituraConfirmada = prepararLeituraConfirmada(dadosRecebidos);
+  const leituraRenderizada = atualizarInterface(leituraConfirmada);
+
+  if (leituraRenderizada) {
+    inicializacao?.confirmarPrimeiraLeitura();
+  }
+
+  return leituraRenderizada;
+}
+
+// O segundo callback da fonte informa apenas procura, porta aberta ou
+// sincronização. Nem mesmo um estado chamado "conectado" libera o painel.
+function informarEstadoDaFonte(estadoRecebido) {
+  escopoAplicacao.HortaInteligente?.inicializacao?.informarEstadoDaFonte(estadoRecebido);
 }
 
 function descreverTempoDecorrido(data) {
@@ -606,15 +698,17 @@ function atualizarEstadoTemporal() {
 
 /**
  * Inicializa qualquer fonte previamente registrada. Para usar dados reais depois,
- * o arquivo Serial precisa oferecer `iniciar(aoReceberDados)` e, opcionalmente,
- * os controles de pausa; as funções visuais abaixo permanecem iguais.
+ * o arquivo Serial precisa oferecer `iniciar(aoReceberDados, aoMudarEstado)` e,
+ * opcionalmente, os controles de pausa; as funções visuais permanecem iguais.
  */
 function iniciarPainel(fonteDados) {
   if (!fonteDados || typeof fonteDados.iniciar !== "function") {
     throw new TypeError("A fonte de dados precisa oferecer o método iniciar().");
   }
 
-  fonteDados.iniciar(atualizarInterface);
+  const inicializacao = escopoAplicacao.HortaInteligente?.inicializacao;
+  inicializacao?.configurarFonte(fonteDados);
+  inicializacao?.informarEstadoDaFonte("aguardando");
 
   const fontePermitePausa = ["pausar", "retomar", "estaPausado"].every(
     (metodo) => typeof fonteDados[metodo] === "function",
@@ -653,11 +747,18 @@ function iniciarPainel(fonteDados) {
       fonteDados.parar?.();
     },
   );
+
+  // A fonte é iniciada por último porque o simulador publica sincronicamente.
+  // Assim, controles, relógio e encerramento já estão prontos ao primeiro dado.
+  fonteDados.iniciar(receberLeituraDaFonte, informarEstadoDaFonte);
 }
 
-// Deixa a função disponível para a futura integração Serial e para testes manuais.
+// Mantém a atualização visual disponível para testes e publica também a entrada
+// validada que deverá ser usada pela futura comunicação Serial.
 const hortaInteligente = escopoAplicacao.HortaInteligente ?? {};
 hortaInteligente.atualizarInterface = atualizarInterface;
+hortaInteligente.receberDadosHorta = receberLeituraDaFonte;
+hortaInteligente.leituraDaHortaValida = leituraDaHortaValida;
 escopoAplicacao.HortaInteligente = hortaInteligente;
 
 try {
@@ -669,6 +770,9 @@ try {
   iniciarPainel(fonteDados);
 } catch (erro) {
   console.error("Não foi possível iniciar o painel da Horta Inteligente.", erro);
+  hortaInteligente.inicializacao?.informarFalha(
+    "A fonte de dados não pôde ser iniciada. Verifique a configuração do sistema.",
+  );
   definirEstadoGlobal("erro", "Falha ao iniciar");
   mostrarAviso("O painel não conseguiu iniciar a fonte de dados. Consulte o console do navegador para mais detalhes.");
 }
