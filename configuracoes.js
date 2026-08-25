@@ -68,6 +68,8 @@
 
     estacao: {
       pastaBiblioteca: null,
+      autoplayInicializacao: false,
+      musicasInicializacao: [],
       aleatorio: false,
       repeticao: "biblioteca",
       retomarSessao: true,
@@ -400,6 +402,14 @@
       },
       estacao: {
         pastaBiblioteca: normalizarTextoNulo(estacao.pastaBiblioteca, 4096),
+        autoplayInicializacao: normalizarBooleano(
+          estacao.autoplayInicializacao,
+          padrao.estacao.autoplayInicializacao,
+        ),
+        musicasInicializacao: normalizarListaTextos(
+          estacao.musicasInicializacao,
+          10000,
+        ),
         aleatorio: normalizarBooleano(
           estacao.aleatorio,
           padrao.estacao.aleatorio,

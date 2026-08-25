@@ -1231,12 +1231,29 @@
                 <div><button type="button" id="botao-alterar-pasta">Alterar pasta</button><button type="button" id="botao-reescanear-biblioteca">Reescanear</button></div>
               </article>
               <article class="grupo-configuracoes">
+                <label class="item-configuracao" data-termos="iniciar música autoplay inicialização abertura"><span><strong>Iniciar com música</strong><small>Reproduz uma faixa selecionada enquanto o sistema aguarda a horta.</small></span><input class="interruptor" type="checkbox" data-configuracao="estacao.autoplayInicializacao" /></label>
                 <label class="item-configuracao" data-termos="aleatório shuffle"><span><strong>Reprodução aleatória</strong><small>Embaralha a próxima sequência.</small></span><input class="interruptor" type="checkbox" data-configuracao="estacao.aleatorio" /></label>
                 <label class="item-configuracao" data-termos="repetição música biblioteca"><span><strong>Repetição padrão</strong><small>Comportamento ao final.</small></span><select data-configuracao="estacao.repeticao"><option value="desativada">Desativada</option><option value="biblioteca">Biblioteca</option><option value="faixa">Uma música</option></select></label>
                 <label class="item-configuracao" data-termos="retomar sessão"><span><strong>Retomar sessão anterior</strong><small>Restaura música, fila e modos sem autoplay.</small></span><input class="interruptor" type="checkbox" checked data-configuracao="estacao.retomarSessao" /></label>
                 <label class="item-configuracao" data-termos="retomar posição"><span><strong>Retomar posição anterior</strong><small>Continua do ponto salvo ao pressionar play.</small></span><input class="interruptor" type="checkbox" checked data-configuracao="estacao.retomarPosicao" /></label>
                 <label class="item-configuracao" data-termos="mini player"><span><strong>Mostrar mini-player</strong><small>Controles disponíveis fora da Estação.</small></span><input class="interruptor" type="checkbox" checked data-configuracao="estacao.mostrarMiniPlayer" /></label>
                 <label class="item-configuracao" data-termos="visualizador áudio"><span><strong>Mostrar visualizador</strong><small>Reage ao áudio quando visível.</small></span><input class="interruptor" type="checkbox" checked data-configuracao="estacao.mostrarVisualizador" /></label>
+              </article>
+              <article class="grupo-configuracoes grupo-musicas-abertura" aria-labelledby="titulo-musicas-abertura">
+                <div class="titulo-grupo-configuracoes">
+                  <div><small>INICIALIZAÇÃO</small><h4 id="titulo-musicas-abertura">Músicas de abertura</h4></div>
+                  <span id="resumo-musicas-abertura" role="status" aria-live="polite" aria-atomic="true">Nenhuma selecionada</span>
+                </div>
+                <div class="acoes-musicas-abertura">
+                  <p>Uma delas será escolhida aleatoriamente a cada abertura.</p>
+                  <div>
+                    <button type="button" data-acao-musicas-inicializacao="selecionar-todas" aria-controls="lista-musicas-abertura">Selecionar todas</button>
+                    <button type="button" data-acao-musicas-inicializacao="limpar" aria-controls="lista-musicas-abertura">Limpar seleção</button>
+                  </div>
+                </div>
+                <div class="lista-musicas-abertura" id="lista-musicas-abertura" role="group" aria-labelledby="titulo-musicas-abertura">
+                  <p class="estado-musicas-abertura">Carregando biblioteca...</p>
+                </div>
               </article>
             </section>
 

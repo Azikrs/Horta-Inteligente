@@ -57,6 +57,25 @@ if (idsDuplicados.length) {
   process.exitCode = 1;
 }
 
+const elementosAudio = [...html.matchAll(/<audio\b/gi)];
+if (elementosAudio.length !== 1 || !html.includes('id="audio-estacao"')) {
+  console.error("A Estação deve possuir exatamente um elemento de áudio central.");
+  process.exitCode = 1;
+}
+
+const fontesAudioRenderer = [
+  "sons.js",
+  "estacao.js",
+  "inicializacao.js",
+  "interface-sistema.js",
+]
+  .map((nome) => arquivos.readFileSync(caminho.join(diretorioProjeto, nome), "utf8"))
+  .join("\n");
+if (/\bnew\s+Audio\s*\(|createElement\s*\(\s*["']audio["']\s*\)/i.test(fontesAudioRenderer)) {
+  console.error("Foi encontrado um segundo player de áudio criado por JavaScript.");
+  process.exitCode = 1;
+}
+
 const pacote = JSON.parse(arquivos.readFileSync(caminho.join(diretorioProjeto, "package.json"), "utf8"));
 if (pacote.main !== "aplicativo.js" || pacote.scripts?.start !== "electron-forge start") {
   console.error("O ponto de entrada ou o comando npm start do Electron está incorreto.");

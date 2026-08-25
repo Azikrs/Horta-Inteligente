@@ -74,6 +74,8 @@ const esquemaConfiguracoes = {
   estacao: {
     // O caminho só pode ser modificado internamente após o diálogo nativo de pasta.
     pastaBiblioteca: { tipo: "textoNulo", padrao: null, maximo: 4096 },
+    autoplayInicializacao: { tipo: "booleano", padrao: false },
+    musicasInicializacao: { tipo: "listaTextos", padrao: [], maximo: 10000 },
     aleatorio: { tipo: "booleano", padrao: false },
     repeticao: {
       tipo: "enum",

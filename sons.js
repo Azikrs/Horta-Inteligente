@@ -36,6 +36,60 @@
     erro: { volume: 0.42, filtro: 560, pulso: 0.1, base: 92 },
   });
 
+  /*
+   * A música atravessa quatro planos sonoros sem trocar de faixa ou player.
+   * Os ganhos abaixo multiplicam o volume escolhido pelo usuário; portanto,
+   * 15% continua terminando em 15%, e 70% continua terminando em 70%.
+   *
+   * Os tempos normais acompanham a coreografia de `inicializacao.js`:
+   * 650 ms de sincronização, 950 ms em Sistema Online e 1,45 s de saída.
+   */
+  const configuracaoMusicaInicializacao = Object.freeze({
+    frequenciaCorpo: 180,
+    frequenciaPresenca: 2400,
+    amostrasCurva: 72,
+    entradaSegundos: 0.72,
+    sincronizacaoSegundos: 0.62,
+    revelacaoSegundos: 0.9,
+    acabamentoSegundos: 1.32,
+    movimentoReduzido: Object.freeze({
+      entradaSegundos: 0.28,
+      sincronizacaoSegundos: 0.12,
+      revelacaoSegundos: 0.24,
+      acabamentoSegundos: 0.24,
+    }),
+    planos: Object.freeze({
+      distante: Object.freeze({
+        frequencia: 1050,
+        ganho: 0.32,
+        corpo: -1.2,
+        presenca: -3.2,
+        q: 0.62,
+      }),
+      sincronizando: Object.freeze({
+        frequencia: 1650,
+        ganho: 0.36,
+        corpo: -0.8,
+        presenca: -2.25,
+        q: 0.64,
+      }),
+      conectado: Object.freeze({
+        frequencia: 5200,
+        ganho: 0.54,
+        corpo: -0.2,
+        presenca: -0.55,
+        q: 0.68,
+      }),
+      erro: Object.freeze({
+        frequencia: 820,
+        ganho: 0.27,
+        corpo: -1.5,
+        presenca: -3.8,
+        q: 0.58,
+      }),
+    }),
+  });
+
   const estadoAudioUsuario = {
     somGeralAtivo: true,
     efeitosAtivos: true,
@@ -70,6 +124,10 @@
   const instanteUltimoEfeito = new Map();
   let ladoNavegacao = -1;
   let musicaEmReproducao = false;
+  let tratamentoMusicaInicializacaoAtivo = false;
+  let faseTratamentoMusicaInicializacao = "normal";
+  let temporizadorBypassMusicaInicializacao = null;
+  let geracaoTratamentoMusicaInicializacao = 0;
   let elementoMusicaPrincipal = null;
   let temporizadorParadaAmbiente = null;
   let temporizadorDucking = null;
@@ -104,6 +162,7 @@
   function ambienteDeveFicarSilencioso() {
     return Boolean(
       musicaEmReproducao
+      && !elementoMusicaPrincipal?.muted
       && estadoAudioUsuario.musicaAtiva
       && estadoAudioUsuario.volumeMusica > 0,
     );
@@ -247,6 +306,301 @@
     }
   }
 
+  function obterTempoMusicaInicializacao(nomeTempo) {
+    if (prefereMovimentoReduzido.matches) {
+      return configuracaoMusicaInicializacao.movimentoReduzido[nomeTempo];
+    }
+    return configuracaoMusicaInicializacao[nomeTempo];
+  }
+
+  function calcularProgressoCurvaMusica(progresso, perfil) {
+    const t = Math.min(1, Math.max(0, progresso));
+    const suave = t * t * t * (t * ((t * 6) - 15) + 10);
+    if (perfil === "antecipacao") return Math.pow(suave, 1.22);
+    if (perfil === "revelacao") return Math.pow(suave, 0.9);
+    return suave;
+  }
+
+  function manterValorAtualDoParametro(parametro, agora) {
+    const valorAtual = parametro.value;
+    if (typeof parametro.cancelAndHoldAtTime === "function") {
+      parametro.cancelAndHoldAtTime(agora);
+      return parametro.value;
+    }
+    parametro.cancelScheduledValues(agora);
+    parametro.setValueAtTime(valorAtual, agora);
+    return valorAtual;
+  }
+
+  /*
+   * `setValueCurveAtTime` deixa todas as etapas contínuas mesmo quando um novo
+   * estado chega no meio da automação. Frequências percorrem escala geométrica;
+   * ganhos de equalização percorrem dB; o fade inicial usa amplitude para não
+   * concentrar toda a audibilidade nos últimos milissegundos.
+   */
+  function animarParametroComCurva(
+    parametro,
+    valorFinal,
+    duracao,
+    { perfil = "suave", escala = "linear", agora = contextoAudio?.currentTime } = {},
+  ) {
+    if (!contextoAudio || !parametro || !Number.isFinite(agora)) return;
+    const valorInicial = manterValorAtualDoParametro(parametro, agora);
+    if (duracao <= 0 || Math.abs(valorFinal - valorInicial) < 0.00001) {
+      parametro.setValueAtTime(valorFinal, agora);
+      return;
+    }
+
+    const quantidade = configuracaoMusicaInicializacao.amostrasCurva;
+    const curva = new Float32Array(quantidade);
+    const inicioSeguro = Math.max(0.0001, valorInicial);
+    const finalSeguro = Math.max(0.0001, valorFinal);
+    for (let indice = 0; indice < quantidade; indice += 1) {
+      const t = indice / (quantidade - 1);
+      const progresso = calcularProgressoCurvaMusica(t, perfil);
+      curva[indice] = escala === "geometrica"
+        ? inicioSeguro * Math.pow(finalSeguro / inicioSeguro, progresso)
+        : valorInicial + ((valorFinal - valorInicial) * progresso);
+    }
+    parametro.setValueCurveAtTime(curva, agora, duracao);
+  }
+
+  function obterPlanoMusicaInicializacao(estado = estadoInicializacao) {
+    if (estado === "sincronizando") {
+      return ["sincronizando", configuracaoMusicaInicializacao.planos.sincronizando];
+    }
+    if (estado === "conectado") {
+      return ["conectado", configuracaoMusicaInicializacao.planos.conectado];
+    }
+    if (estado === "erro") {
+      return ["erro", configuracaoMusicaInicializacao.planos.erro];
+    }
+    return ["distante", configuracaoMusicaInicializacao.planos.distante];
+  }
+
+  function prepararNosDoTratamento(plano, ganho = 0) {
+    if (!contextoAudio) return;
+    const agora = contextoAudio.currentTime;
+    nosAudio.filtroMusicaInicializacao.type = "lowpass";
+    nosAudio.corpoMusicaInicializacao.type = "lowshelf";
+    nosAudio.presencaMusicaInicializacao.type = "highshelf";
+    animarParametro(nosAudio.filtroMusicaInicializacao.frequency, plano.frequencia, 0);
+    animarParametro(nosAudio.filtroMusicaInicializacao.Q, plano.q, 0);
+    animarParametro(nosAudio.corpoMusicaInicializacao.gain, plano.corpo, 0);
+    animarParametro(nosAudio.presencaMusicaInicializacao.gain, plano.presenca, 0);
+    nosAudio.ganhoMusicaInicializacao.gain.cancelScheduledValues(agora);
+    nosAudio.ganhoMusicaInicializacao.gain.setValueAtTime(ganho, agora);
+  }
+
+  function transicionarParaPlanoMusica(
+    nomePlano,
+    plano,
+    { duracao, perfil = "suave", entrada = false } = {},
+  ) {
+    if (!contextoAudio || !tratamentoMusicaInicializacaoAtivo) return false;
+    const agora = contextoAudio.currentTime;
+    nosAudio.filtroMusicaInicializacao.type = "lowpass";
+    animarParametroComCurva(
+      nosAudio.filtroMusicaInicializacao.frequency,
+      plano.frequencia,
+      duracao,
+      { perfil, escala: "geometrica", agora },
+    );
+    animarParametroComCurva(
+      nosAudio.filtroMusicaInicializacao.Q,
+      plano.q,
+      duracao,
+      { perfil, agora },
+    );
+    animarParametroComCurva(
+      nosAudio.corpoMusicaInicializacao.gain,
+      plano.corpo,
+      duracao,
+      { perfil, agora },
+    );
+    animarParametroComCurva(
+      nosAudio.presencaMusicaInicializacao.gain,
+      plano.presenca,
+      duracao,
+      { perfil, agora },
+    );
+    animarParametroComCurva(
+      nosAudio.ganhoMusicaInicializacao.gain,
+      plano.ganho,
+      duracao,
+      { perfil, escala: entrada ? "linear" : "geometrica", agora },
+    );
+    faseTratamentoMusicaInicializacao = nomePlano;
+    return true;
+  }
+
+  function iniciarEntradaMusicaInicializacao() {
+    if (
+      !tratamentoMusicaInicializacaoAtivo
+      || faseTratamentoMusicaInicializacao !== "preparado"
+    ) return false;
+    const [nomePlano, plano] = obterPlanoMusicaInicializacao();
+    return transicionarParaPlanoMusica(nomePlano, plano, {
+      duracao: obterTempoMusicaInicializacao("entradaSegundos"),
+      perfil: "suave",
+      entrada: true,
+    });
+  }
+
+  function acompanharEstadoMusicaInicializacao(novoEstado) {
+    if (!tratamentoMusicaInicializacaoAtivo) return false;
+    const [nomePlano, plano] = obterPlanoMusicaInicializacao(novoEstado);
+    if (faseTratamentoMusicaInicializacao === "preparado") {
+      prepararNosDoTratamento(plano, 0);
+      return true;
+    }
+    if (faseTratamentoMusicaInicializacao === nomePlano) return true;
+
+    const sincronizando = nomePlano === "sincronizando";
+    const conectado = nomePlano === "conectado";
+    return transicionarParaPlanoMusica(nomePlano, plano, {
+      duracao: conectado
+        ? obterTempoMusicaInicializacao("revelacaoSegundos")
+        : sincronizando
+          ? obterTempoMusicaInicializacao("sincronizacaoSegundos")
+          : prefereMovimentoReduzido.matches ? 0.05 : 0.48,
+      perfil: sincronizando ? "antecipacao" : conectado ? "revelacao" : "suave",
+    });
+  }
+
+  function normalizarTratamentoMusicaInicializacao(contextoTratado, nosTratados) {
+    if (contextoAudio !== contextoTratado || nosAudio !== nosTratados) return;
+    const agora = contextoTratado.currentTime;
+    const frequenciaAberta = contextoTratado.sampleRate / 2;
+    const definir = (parametro, valor) => {
+      parametro.cancelScheduledValues(agora);
+      parametro.setValueAtTime(valor, agora);
+    };
+    definir(nosTratados.ganhoMusicaInicializacao.gain, 1);
+    definir(nosTratados.corpoMusicaInicializacao.gain, 0);
+    definir(nosTratados.presencaMusicaInicializacao.gain, 0);
+    definir(nosTratados.filtroMusicaInicializacao.frequency, frequenciaAberta);
+    definir(nosTratados.filtroMusicaInicializacao.Q, 0.0001);
+    nosTratados.filtroMusicaInicializacao.type = "allpass";
+    faseTratamentoMusicaInicializacao = "normal";
+  }
+
+  /**
+   * Prepara, ainda em silêncio, o processamento temporário da mesma saída da
+   * Estação. A entrada audível só começa no evento `playing`; carregamento lento
+   * e tentativas alternativas nunca consomem o fade antes de a faixa existir.
+   */
+  function aplicarTratamentoMusicaInicializacao({ entrada = true } = {}) {
+    if (introducaoEncerrada || sistemaEncerrado) return false;
+    const contexto = criarGrafoAudio();
+    if (
+      !contexto
+      || !nosAudio.filtroMusicaInicializacao
+      || !nosAudio.corpoMusicaInicializacao
+      || !nosAudio.presencaMusicaInicializacao
+      || !nosAudio.ganhoMusicaInicializacao
+    ) return false;
+
+    geracaoTratamentoMusicaInicializacao += 1;
+    if (temporizadorBypassMusicaInicializacao !== null) {
+      escopoAplicacao.clearTimeout(temporizadorBypassMusicaInicializacao);
+      temporizadorBypassMusicaInicializacao = null;
+    }
+    tratamentoMusicaInicializacaoAtivo = true;
+    faseTratamentoMusicaInicializacao = "preparado";
+    const [nomePlano, plano] = obterPlanoMusicaInicializacao();
+    prepararNosDoTratamento(plano, entrada ? 0 : plano.ganho);
+    if (!entrada) faseTratamentoMusicaInicializacao = nomePlano;
+    return true;
+  }
+
+  function removerTratamentoMusicaInicializacao({ imediato = false } = {}) {
+    const haviaTratamento = tratamentoMusicaInicializacaoAtivo
+      || faseTratamentoMusicaInicializacao !== "normal";
+    geracaoTratamentoMusicaInicializacao += 1;
+    const geracaoAtual = geracaoTratamentoMusicaInicializacao;
+    if (temporizadorBypassMusicaInicializacao !== null) {
+      escopoAplicacao.clearTimeout(temporizadorBypassMusicaInicializacao);
+      temporizadorBypassMusicaInicializacao = null;
+    }
+    tratamentoMusicaInicializacaoAtivo = false;
+    if (!haviaTratamento) return false;
+    if (
+      !contextoAudio
+      || !nosAudio.filtroMusicaInicializacao
+      || !nosAudio.corpoMusicaInicializacao
+      || !nosAudio.presencaMusicaInicializacao
+      || !nosAudio.ganhoMusicaInicializacao
+    ) {
+      faseTratamentoMusicaInicializacao = "normal";
+      return false;
+    }
+
+    const contextoTratado = contextoAudio;
+    const nosTratados = nosAudio;
+    const deveNormalizarImediatamente = imediato
+      || contextoTratado.state !== "running"
+      || !somAtivado;
+    const duracao = deveNormalizarImediatamente
+      ? 0
+      : obterTempoMusicaInicializacao("acabamentoSegundos");
+    const frequenciaAberta = contextoTratado.sampleRate / 2;
+    faseTratamentoMusicaInicializacao = duracao > 0 ? "acabamento" : "normal";
+
+    if (duracao > 0) {
+      const agora = contextoTratado.currentTime;
+      animarParametroComCurva(
+        nosTratados.ganhoMusicaInicializacao.gain,
+        1,
+        duracao,
+        { perfil: "revelacao", escala: "geometrica", agora },
+      );
+      animarParametroComCurva(
+        nosTratados.corpoMusicaInicializacao.gain,
+        0,
+        duracao,
+        { perfil: "revelacao", agora },
+      );
+      animarParametroComCurva(
+        nosTratados.presencaMusicaInicializacao.gain,
+        0,
+        duracao,
+        { perfil: "revelacao", agora },
+      );
+      animarParametroComCurva(
+        nosTratados.filtroMusicaInicializacao.frequency,
+        frequenciaAberta,
+        duracao,
+        { perfil: "revelacao", escala: "geometrica", agora },
+      );
+      animarParametroComCurva(
+        nosTratados.filtroMusicaInicializacao.Q,
+        0.707,
+        duracao,
+        { perfil: "revelacao", agora },
+      );
+    }
+
+    const ativarBypass = () => {
+      temporizadorBypassMusicaInicializacao = null;
+      if (
+        contextoAudio !== contextoTratado
+        || nosAudio !== nosTratados
+        || tratamentoMusicaInicializacaoAtivo
+        || geracaoAtual !== geracaoTratamentoMusicaInicializacao
+      ) return;
+      normalizarTratamentoMusicaInicializacao(contextoTratado, nosTratados);
+    };
+    if (duracao <= 0) ativarBypass();
+    else {
+      temporizadorBypassMusicaInicializacao = escopoAplicacao.setTimeout(
+        ativarBypass,
+        (duracao * 1000) + 35,
+      );
+    }
+    return true;
+  }
+
   function criarBufferAr(contexto) {
     const duracao = 7.2;
     const buffer = contexto.createBuffer(2, contexto.sampleRate * duracao, contexto.sampleRate);
@@ -311,9 +665,15 @@
   function criarGrafoAudio() {
     if (!ConstrutorContextoAudio || sistemaEncerrado) return null;
     if (contextoAudio?.state === "closed") {
+      if (temporizadorBypassMusicaInicializacao !== null) {
+        escopoAplicacao.clearTimeout(temporizadorBypassMusicaInicializacao);
+        temporizadorBypassMusicaInicializacao = null;
+      }
       contextoAudio = null;
       nosAudio = {};
       ambienteCriado = false;
+      tratamentoMusicaInicializacaoAtivo = false;
+      faseTratamentoMusicaInicializacao = "normal";
     }
     if (contextoAudio) return contextoAudio;
 
@@ -336,6 +696,10 @@
       nosAudio.limitador = contextoAudio.createDynamicsCompressor();
       nosAudio.analisador = contextoAudio.createAnalyser();
       nosAudio.analisadorMusica = contextoAudio.createAnalyser();
+      nosAudio.corpoMusicaInicializacao = contextoAudio.createBiquadFilter();
+      nosAudio.filtroMusicaInicializacao = contextoAudio.createBiquadFilter();
+      nosAudio.presencaMusicaInicializacao = contextoAudio.createBiquadFilter();
+      nosAudio.ganhoMusicaInicializacao = contextoAudio.createGain();
       nosAudio.musica = contextoAudio.createGain();
       nosAudio.duckingMusica = contextoAudio.createGain();
       nosAudio.reverberadorEfeitos = contextoAudio.createConvolver();
@@ -384,6 +748,25 @@
       nosAudio.analisador.smoothingTimeConstant = 0.22;
       nosAudio.analisadorMusica.fftSize = 1024;
       nosAudio.analisadorMusica.smoothingTimeConstant = 0.78;
+      nosAudio.corpoMusicaInicializacao.type = "lowshelf";
+      nosAudio.corpoMusicaInicializacao.frequency.setValueAtTime(
+        configuracaoMusicaInicializacao.frequenciaCorpo,
+        agora,
+      );
+      nosAudio.corpoMusicaInicializacao.gain.setValueAtTime(0, agora);
+      nosAudio.filtroMusicaInicializacao.type = "allpass";
+      nosAudio.filtroMusicaInicializacao.frequency.setValueAtTime(
+        contextoAudio.sampleRate / 2,
+        agora,
+      );
+      nosAudio.filtroMusicaInicializacao.Q.setValueAtTime(0.0001, agora);
+      nosAudio.presencaMusicaInicializacao.type = "highshelf";
+      nosAudio.presencaMusicaInicializacao.frequency.setValueAtTime(
+        configuracaoMusicaInicializacao.frequenciaPresenca,
+        agora,
+      );
+      nosAudio.presencaMusicaInicializacao.gain.setValueAtTime(0, agora);
+      nosAudio.ganhoMusicaInicializacao.gain.setValueAtTime(1, agora);
 
       nosAudio.interface.connect(nosAudio.efeitos);
       nosAudio.atuadores.connect(nosAudio.efeitos);
@@ -394,7 +777,11 @@
       nosAudio.reverberadorAmbiente.connect(nosAudio.retornoReverberacaoAmbiente);
       nosAudio.retornoReverberacaoAmbiente.connect(nosAudio.ambiente);
       nosAudio.compressor.connect(nosAudio.mestre);
-      nosAudio.analisadorMusica.connect(nosAudio.musica);
+      nosAudio.analisadorMusica.connect(nosAudio.corpoMusicaInicializacao);
+      nosAudio.corpoMusicaInicializacao.connect(nosAudio.filtroMusicaInicializacao);
+      nosAudio.filtroMusicaInicializacao.connect(nosAudio.presencaMusicaInicializacao);
+      nosAudio.presencaMusicaInicializacao.connect(nosAudio.ganhoMusicaInicializacao);
+      nosAudio.ganhoMusicaInicializacao.connect(nosAudio.musica);
       nosAudio.musica.connect(nosAudio.duckingMusica);
       nosAudio.duckingMusica.connect(nosAudio.mestre);
       nosAudio.mestre.connect(nosAudio.limitador);
@@ -1250,6 +1637,7 @@
     const novoEstado = evento.detail?.estado;
     if (!configuracaoAmbiente[novoEstado] || introducaoEncerrada) return;
     aplicarEstadoAmbiente(novoEstado, true);
+    acompanharEstadoMusicaInicializacao(novoEstado);
     if (somAtivado) iniciarAmbiente();
   }
 
@@ -1258,6 +1646,7 @@
   function encerrarAmbienteDaIntroducao() {
     if (introducaoEncerrada) return;
     introducaoEncerrada = true;
+    removerTratamentoMusicaInicializacao();
     silenciarAmbienteComFade(prefereMovimentoReduzido.matches ? 0.08 : 1.05);
   }
 
@@ -1604,7 +1993,15 @@
     const promessaConexao = (async () => {
       const contexto = criarGrafoAudio();
       if (!contexto || !nosAudio.analisadorMusica) return null;
-      if (somAtivado && !document.hidden) await garantirContexto();
+      if (somAtivado && !document.hidden) {
+        await garantirContexto();
+      } else if (!somAtivado && contexto.state === "running") {
+        // O player pode ser conectado depois que a preferência mestre já foi
+        // carregada. Nesse caso o contexto recém-criado também deve nascer em
+        // repouso, não apenas com ganho zero.
+        try { await contexto.suspend(); } catch { /* janela em encerramento */ }
+        if (somAtivado && !document.hidden) await garantirContexto();
+      }
       if (sistemaEncerrado || contexto !== contextoAudio || !nosAudio.analisadorMusica) return null;
 
       const registroCriadoEnquantoAguardava = fontesMusicaPorElemento.get(elementoAudio);
@@ -1613,9 +2010,12 @@
       try {
         const fonte = contexto.createMediaElementSource(elementoAudio);
         fonte.connect(nosAudio.analisadorMusica);
-        const reconciliarReproducao = () => informarEstadoMusica(
-          algumElementoMusicaTocando(),
-        );
+        const reconciliarReproducao = (evento) => {
+          informarEstadoMusica(algumElementoMusicaTocando());
+          if (evento?.type === "playing" && elementoAudio === elementoMusicaPrincipal) {
+            iniciarEntradaMusicaInicializacao();
+          }
+        };
         const eventos = ["play", "playing", "pause", "ended", "emptied"];
         eventos.forEach((nomeEvento) => {
           elementoAudio.addEventListener(nomeEvento, reconciliarReproducao);
@@ -1759,6 +2159,23 @@
       introducaoEncerrada,
       ambienteAtivo: ambienteCriado,
       musicaEmReproducao,
+      tratamentoMusicaInicializacao: {
+        ativo: tratamentoMusicaInicializacaoAtivo,
+        fase: faseTratamentoMusicaInicializacao,
+        tipoFiltro: nosAudio.filtroMusicaInicializacao?.type ?? "inexistente",
+        ganhoAtual: Number(
+          (nosAudio.ganhoMusicaInicializacao?.gain.value ?? 1).toFixed(4),
+        ),
+        frequenciaAtual: Math.round(
+          nosAudio.filtroMusicaInicializacao?.frequency.value ?? 0,
+        ),
+        corpoDb: Number(
+          (nosAudio.corpoMusicaInicializacao?.gain.value ?? 0).toFixed(2),
+        ),
+        presencaDb: Number(
+          (nosAudio.presencaMusicaInicializacao?.gain.value ?? 0).toFixed(2),
+        ),
+      },
       elementoMusicaConectado: Boolean(elementoMusicaPrincipal),
       fontesAtivas: fontesAtivas.size,
       nivelSaida: obterNivelSaida(),
@@ -1870,6 +2287,13 @@
     promessasConexaoPorElemento = new WeakMap();
     elementoMusicaPrincipal = null;
     musicaEmReproducao = false;
+    tratamentoMusicaInicializacaoAtivo = false;
+    faseTratamentoMusicaInicializacao = "normal";
+    geracaoTratamentoMusicaInicializacao += 1;
+    if (temporizadorBypassMusicaInicializacao !== null) {
+      escopoAplicacao.clearTimeout(temporizadorBypassMusicaInicializacao);
+      temporizadorBypassMusicaInicializacao = null;
+    }
 
     if (contextoAudio) {
       const contextoParaFechar = contextoAudio;
@@ -1955,6 +2379,8 @@
     definirVolumeAmbiente,
     definirMusicaAtiva,
     definirVolumeMusica,
+    aplicarTratamentoMusicaInicializacao,
+    removerTratamentoMusicaInicializacao,
     conectarElementoMusica,
     desconectarElementoMusica,
     informarEstadoMusica,

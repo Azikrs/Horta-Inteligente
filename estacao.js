@@ -54,6 +54,7 @@
     bombaImersiva: document.querySelector("#bomba-imersiva"),
     luzImersiva: document.querySelector("#luz-imersiva"),
     arduinoImersivo: document.querySelector("#arduino-imersivo"),
+    telaInicializacao: document.querySelector("#tela-inicializacao"),
   };
 
   if (!elementos.pagina || !elementos.audio) {
@@ -94,6 +95,19 @@
     idsComErro: new Set(),
     paginaVisivel: false,
     removerProgressoBiblioteca: null,
+    musicaInicializacao: {
+      avaliada: false,
+      ativa: false,
+      candidatos: [],
+      idTentativa: null,
+      token: 0,
+      tokenTrocaTentativa: 0,
+      iniciouReproducao: false,
+      reproducaoSolicitada: false,
+      aguardandoGesto: false,
+      tentativaPorGestoUsada: false,
+      sessaoAnterior: null,
+    },
   };
 
   const extensaoTexto = new Intl.Collator("pt-BR", { sensitivity: "base", numeric: true });
@@ -659,18 +673,29 @@
     return true;
   }
 
-  async function reproduzir(registrarIntencao = true, tokenEsperado = null) {
-    if (registrarIntencao) estado.versaoIntencaoReproducao += 1;
+  async function reproduzir(
+    registrarIntencao = true,
+    tokenEsperado = null,
+    { silencioso = false, propagarErro = false } = {},
+  ) {
+    if (registrarIntencao) {
+      estado.versaoIntencaoReproducao += 1;
+      if (estado.musicaInicializacao.ativa) {
+        finalizarMusicaInicializacao({ normalizarAudio: true });
+      }
+    }
     if (!estado.musicaAtualId) {
       const primeira = estado.aleatorio
         ? estado.biblioteca[Math.floor(Math.random() * estado.biblioteca.length)]
         : estado.biblioteca[0];
-      if (!primeira) return;
+      if (!primeira) return false;
       prepararFaixa(primeira.id, { reconstruirFila: true });
     }
     if (!obterConfiguracao("audio.musica.ativo", true) || obterConfiguracao("acessibilidade.silenciarTudo", false)) {
-      notificar("Música está desativada", "Ative a música na Central de Configurações.", "informacao");
-      return;
+      if (!silencioso) {
+        notificar("Música está desativada", "Ative a música na Central de Configurações.", "informacao");
+      }
+      return false;
     }
     const idEsperado = estado.musicaAtualId;
     try {
@@ -678,19 +703,29 @@
       if (
         estado.musicaAtualId !== idEsperado
         || (tokenEsperado !== null && tokenEsperado !== estado.tokenTroca)
-      ) return;
+      ) return false;
       await elementos.audio.play();
+      return true;
     } catch (erro) {
       const trocaFicouObsoleta = estado.musicaAtualId !== idEsperado
         || (tokenEsperado !== null && tokenEsperado !== estado.tokenTroca);
-      if (trocaFicouObsoleta || erro?.name === "AbortError") return;
-      console.error("A faixa não pôde ser reproduzida.", erro);
-      notificar("Não foi possível reproduzir", "O arquivo pode ter sido movido ou não ser compatível.", "erro");
+      if (trocaFicouObsoleta || erro?.name === "AbortError") return false;
+      if (propagarErro) throw erro;
+      if (!silencioso) {
+        console.error("A faixa não pôde ser reproduzida.", erro);
+        notificar("Não foi possível reproduzir", "O arquivo pode ter sido movido ou não ser compatível.", "erro");
+      }
+      return false;
     }
   }
 
   function pausar(registrarIntencao = true) {
-    if (registrarIntencao) estado.versaoIntencaoReproducao += 1;
+    if (registrarIntencao) {
+      estado.versaoIntencaoReproducao += 1;
+      if (estado.musicaInicializacao.ativa) {
+        finalizarMusicaInicializacao({ normalizarAudio: true });
+      }
+    }
     elementos.audio.pause();
     persistirSessao();
   }
@@ -742,7 +777,9 @@
     const deveReproduzir = forcarReproducao || !elementos.audio.paused;
     if (estado.repeticao === "faixa" && fimNatural) {
       elementos.audio.currentTime = 0;
-      if (deveReproduzir) reproduzir();
+      // A repetição natural não é uma nova intenção do usuário e, durante a
+      // abertura, deve continuar atravessando o mesmo tratamento temporário.
+      if (deveReproduzir) reproduzir(!estado.musicaInicializacao.ativa);
       return;
     }
     let proximoId = estado.fila.shift();
@@ -959,6 +996,293 @@
     });
   }
 
+  function introducaoPermiteMusica({ exigirVisibilidade = true } = {}) {
+    const introducaoAtiva = document.body.classList.contains("inicializacao-ativa")
+      && !raiz.inicializacao?.estaConcluida?.();
+    const musicaSilenciada = elementos.audio.muted
+      || obterConfiguracao("estacao.musicaSilenciada", false);
+    const configuracaoPermite = Boolean(
+      obterConfiguracao("estacao.autoplayInicializacao", false)
+      && obterConfiguracao("audio.somGeralAtivo", true)
+      && obterConfiguracao("audio.musica.ativo", true)
+      && (!musicaSilenciada || estado.musicaInicializacao.ativa)
+      && !obterConfiguracao("acessibilidade.silenciarTudo", false),
+    );
+    return introducaoAtiva
+      && configuracaoPermite
+      && (!exigirVisibilidade || document.visibilityState === "visible");
+  }
+
+  function embaralharIds(ids) {
+    const resultado = [...ids];
+    for (let indice = resultado.length - 1; indice > 0; indice -= 1) {
+      const destino = Math.floor(Math.random() * (indice + 1));
+      [resultado[indice], resultado[destino]] = [resultado[destino], resultado[indice]];
+    }
+    return resultado;
+  }
+
+  function aguardarVisibilidadeDaInicializacao(token) {
+    if (document.visibilityState === "visible") {
+      return Promise.resolve(introducaoPermiteMusica());
+    }
+
+    return new Promise((resolver) => {
+      let concluido = false;
+      const concluir = (resultado) => {
+        if (concluido) return;
+        concluido = true;
+        document.removeEventListener("visibilitychange", verificar);
+        elementos.telaInicializacao?.removeEventListener(
+          "encerramentoinicializacao",
+          encerrar,
+        );
+        window.removeEventListener("pagehide", encerrar);
+        resolver(resultado);
+      };
+      const verificar = () => {
+        if (token !== estado.musicaInicializacao.token) concluir(false);
+        else if (document.visibilityState === "visible") {
+          concluir(introducaoPermiteMusica());
+        }
+      };
+      const encerrar = () => concluir(false);
+      document.addEventListener("visibilitychange", verificar);
+      elementos.telaInicializacao?.addEventListener(
+        "encerramentoinicializacao",
+        encerrar,
+        { once: true },
+      );
+      window.addEventListener("pagehide", encerrar, { once: true });
+    });
+  }
+
+  function cancelarEsperaGestoMusicaInicializacao() {
+    if (!estado.musicaInicializacao.aguardandoGesto) return;
+    estado.musicaInicializacao.aguardandoGesto = false;
+    window.removeEventListener("pointerdown", aoGestoMusicaInicializacao, true);
+    window.removeEventListener("keydown", aoGestoMusicaInicializacao, true);
+  }
+
+  function capturarSessaoAntesDaMusicaInicializacao() {
+    return {
+      musicaAtualId: estado.musicaAtualId,
+      ultimaFaixaId: obterConfiguracao("estacao.ultimaFaixaId", null),
+      posicao: Number(obterConfiguracao("estacao.posicao", 0)) || 0,
+      fila: [...(obterConfiguracao("estacao.fila", []) ?? [])],
+      historicoReproducao: [...estado.historicoReproducao],
+    };
+  }
+
+  function restaurarSessaoAntesDaMusicaInicializacao(sessao) {
+    if (!sessao) return;
+    elementos.audio.pause();
+
+    if (sessao.musicaAtualId && estado.faixasPorId.has(sessao.musicaAtualId)) {
+      prepararFaixa(sessao.musicaAtualId, {
+        registrarHistorico: false,
+        posicaoInicial: sessao.posicao,
+      });
+      estado.historicoReproducao = [...sessao.historicoReproducao];
+      queueMicrotask(() => {
+        if (estado.musicaAtualId === sessao.musicaAtualId) aplicarPosicoesPendentes();
+      });
+    } else {
+      limparMusicaAtual("Escolha uma música para começar.");
+    }
+
+    // `prepararFaixa` organiza uma fila nova para o player normal. Em caso de
+    // falha durante o boot, devolvemos exatamente a sessão que existia antes.
+    estado.fila = [...new Set(sessao.fila)]
+      .filter((id) => estado.faixasPorId.has(id) && id !== estado.musicaAtualId);
+    atualizarFila();
+    configuracoes?.alterarLote?.({
+      "estacao.ultimaFaixaId": sessao.ultimaFaixaId,
+      "estacao.posicao": sessao.posicao,
+      "estacao.fila": [...sessao.fila],
+    });
+  }
+
+  function finalizarMusicaInicializacao({
+    pausarSePendente = false,
+    normalizarAudio = false,
+    restaurarSessaoAnterior = false,
+  } = {}) {
+    const estavaAtiva = estado.musicaInicializacao.ativa;
+    const sessaoAnterior = estado.musicaInicializacao.sessaoAnterior;
+    if (pausarSePendente || restaurarSessaoAnterior) {
+      // Invalida também qualquer `await` antigo da troca. Sem isso, uma faixa
+      // restaurada com o mesmo ID poderia iniciar atrasada já no dashboard.
+      estado.tokenTroca += 1;
+    }
+    estado.musicaInicializacao.token += 1;
+    estado.musicaInicializacao.ativa = false;
+    estado.musicaInicializacao.candidatos = [];
+    estado.musicaInicializacao.idTentativa = null;
+    estado.musicaInicializacao.tokenTrocaTentativa = 0;
+    estado.musicaInicializacao.reproducaoSolicitada = false;
+    estado.musicaInicializacao.sessaoAnterior = null;
+    cancelarEsperaGestoMusicaInicializacao();
+    if (pausarSePendente) elementos.audio.pause();
+    if (restaurarSessaoAnterior) {
+      restaurarSessaoAntesDaMusicaInicializacao(sessaoAnterior);
+    }
+    if (normalizarAudio) {
+      raiz.sons?.removerTratamentoMusicaInicializacao?.({ imediato: true });
+    }
+    return estavaAtiva;
+  }
+
+  function concluirTentativasMusicaInicializacao() {
+    finalizarMusicaInicializacao({
+      pausarSePendente: true,
+      normalizarAudio: true,
+      restaurarSessaoAnterior: true,
+    });
+    raiz.sons?.informarEstadoMusica?.(false);
+    atualizarBotoesReproducao();
+    return false;
+  }
+
+  function agendarRepeticaoMusicaInicializacao(token, id) {
+    if (
+      estado.musicaInicializacao.tentativaPorGestoUsada
+      || estado.musicaInicializacao.aguardandoGesto
+    ) return concluirTentativasMusicaInicializacao();
+    estado.musicaInicializacao.aguardandoGesto = true;
+    window.addEventListener("pointerdown", aoGestoMusicaInicializacao, true);
+    window.addEventListener("keydown", aoGestoMusicaInicializacao, true);
+    estado.musicaInicializacao.token = token;
+    estado.musicaInicializacao.idTentativa = id;
+    return false;
+  }
+
+  function aoGestoMusicaInicializacao(evento) {
+    const alvo = evento.target instanceof Element ? evento.target : null;
+    if (alvo?.closest("[data-controle-som]")) return;
+    const token = estado.musicaInicializacao.token;
+    const id = estado.musicaInicializacao.idTentativa;
+    cancelarEsperaGestoMusicaInicializacao();
+    estado.musicaInicializacao.tentativaPorGestoUsada = true;
+    queueMicrotask(() => {
+      if (
+        !estado.musicaInicializacao.ativa
+        || token !== estado.musicaInicializacao.token
+        || id !== estado.musicaInicializacao.idTentativa
+        || !introducaoPermiteMusica()
+      ) return;
+      void tentarReproduzirCandidatoInicializacao(token, id);
+    });
+  }
+
+  function tratarFalhaMusicaInicializacao(token, id) {
+    if (
+      !estado.musicaInicializacao.ativa
+      || token !== estado.musicaInicializacao.token
+      || id !== estado.musicaInicializacao.idTentativa
+    ) return false;
+    estado.idsComErro.add(id);
+    estado.musicaInicializacao.idTentativa = null;
+    estado.musicaInicializacao.iniciouReproducao = false;
+    estado.musicaInicializacao.reproducaoSolicitada = false;
+    void tentarProximaMusicaInicializacao(token);
+    return true;
+  }
+
+  async function tentarReproduzirCandidatoInicializacao(token, id) {
+    if (
+      !estado.musicaInicializacao.ativa
+      || token !== estado.musicaInicializacao.token
+      || id !== estado.musicaInicializacao.idTentativa
+      || !introducaoPermiteMusica()
+    ) return false;
+
+    try {
+      const reproduziu = await reproduzir(
+        false,
+        estado.musicaInicializacao.tokenTrocaTentativa,
+        { silencioso: true, propagarErro: true },
+      );
+      if (
+        token !== estado.musicaInicializacao.token
+        || id !== estado.musicaInicializacao.idTentativa
+      ) return false;
+      if (!reproduziu) return concluirTentativasMusicaInicializacao();
+      return true;
+    } catch (erro) {
+      if (
+        token !== estado.musicaInicializacao.token
+        || id !== estado.musicaInicializacao.idTentativa
+      ) return false;
+      if (erro?.name === "NotAllowedError") {
+        return agendarRepeticaoMusicaInicializacao(token, id);
+      }
+      return tratarFalhaMusicaInicializacao(token, id);
+    }
+  }
+
+  async function tentarProximaMusicaInicializacao(token) {
+    if (
+      !estado.musicaInicializacao.ativa
+      || token !== estado.musicaInicializacao.token
+      || !introducaoPermiteMusica()
+    ) return false;
+
+    let id = estado.musicaInicializacao.candidatos.shift();
+    while (id && (!estado.faixasPorId.has(id) || estado.idsComErro.has(id))) {
+      id = estado.musicaInicializacao.candidatos.shift();
+    }
+    if (!id) return concluirTentativasMusicaInicializacao();
+
+    estado.musicaInicializacao.idTentativa = id;
+    estado.musicaInicializacao.iniciouReproducao = false;
+    estado.musicaInicializacao.reproducaoSolicitada = false;
+    estado.musicaInicializacao.tokenTrocaTentativa = ++estado.tokenTroca;
+    prepararFaixa(id, {
+      reconstruirFila: true,
+      registrarHistorico: false,
+      posicaoInicial: 0,
+    });
+    if (!raiz.sons?.aplicarTratamentoMusicaInicializacao?.({ entrada: true })) {
+      return concluirTentativasMusicaInicializacao();
+    }
+    return tentarReproduzirCandidatoInicializacao(token, id);
+  }
+
+  /**
+   * Executada uma única vez por abertura, depois que configurações, biblioteca
+   * e o grafo central estão prontos. A origem musical nunca conhece a tela: ela
+   * apenas prepara uma faixa no mesmo objeto de dados usado pela Estação.
+   */
+  async function iniciarMusicaDaInicializacao() {
+    if (estado.musicaInicializacao.avaliada) return false;
+    estado.musicaInicializacao.avaliada = true;
+    if (!introducaoPermiteMusica({ exigirVisibilidade: false })) return false;
+
+    const selecionadas = obterConfiguracao("estacao.musicasInicializacao", []);
+    const idsElegiveis = [...new Set(Array.isArray(selecionadas) ? selecionadas : [])]
+      .map((id) => String(id ?? ""))
+      .filter((id) => estado.faixasPorId.has(id));
+    if (!idsElegiveis.length) return false;
+
+    const token = ++estado.musicaInicializacao.token;
+    const janelaVisivel = await aguardarVisibilidadeDaInicializacao(token);
+    if (!janelaVisivel || token !== estado.musicaInicializacao.token) return false;
+
+    const analisador = await raiz.sons?.conectarElementoMusica?.(elementos.audio);
+    if (
+      !analisador
+      || token !== estado.musicaInicializacao.token
+      || !introducaoPermiteMusica()
+    ) return false;
+
+    estado.musicaInicializacao.ativa = true;
+    estado.musicaInicializacao.sessaoAnterior = capturarSessaoAntesDaMusicaInicializacao();
+    estado.musicaInicializacao.candidatos = embaralharIds(idsElegiveis);
+    estado.musicaInicializacao.tentativaPorGestoUsada = false;
+    return tentarProximaMusicaInicializacao(token);
+  }
+
   function atualizarBotoesModos() {
     document.querySelectorAll('[data-acao-player="aleatorio"]').forEach((botao) => botao.setAttribute("aria-pressed", String(estado.aleatorio)));
     document.querySelectorAll('[data-acao-player="repeticao"]').forEach((botao) => {
@@ -994,7 +1318,7 @@
     elementos.audio.muted = !elementos.audio.muted;
     elementos.mute.setAttribute("aria-pressed", String(elementos.audio.muted));
     alterarConfiguracao("estacao.musicaSilenciada", elementos.audio.muted);
-    emitirEstadoMusica();
+    atualizarBotoesReproducao();
   }
 
   function alternarImersivo(forcar, { imediato = false } = {}) {
@@ -1239,8 +1563,25 @@
       if (estado.carregandoAudio) elementos.estadoReproducao.textContent = "Preparando faixa";
       emitirEstadoMusica();
     });
-    elementos.audio.addEventListener("play", atualizarBotoesReproducao);
+    elementos.audio.addEventListener("play", () => {
+      if (
+        estado.musicaInicializacao.ativa
+        && estado.musicaInicializacao.idTentativa === estado.musicaAtualId
+      ) {
+        // `play` confirma que o navegador aceitou a reprodução, mesmo que o
+        // primeiro quadro de áudio ainda esteja em buffer. O fade sonoro continua
+        // esperando `playing`, mas a faixa não deve ser descartada nesse intervalo.
+        estado.musicaInicializacao.reproducaoSolicitada = true;
+      }
+      atualizarBotoesReproducao();
+    });
     elementos.audio.addEventListener("playing", () => {
+      if (
+        estado.musicaInicializacao.ativa
+        && estado.musicaInicializacao.idTentativa === estado.musicaAtualId
+      ) {
+        estado.musicaInicializacao.iniciouReproducao = true;
+      }
       estado.carregandoAudio = false;
       elementos.pagina.dataset.carregandoAudio = "false";
       atualizarBotoesReproducao();
@@ -1276,6 +1617,16 @@
       if (!idComErro || estado.ultimoErroAudioId === idComErro) return;
       estado.ultimoErroAudioId = idComErro;
       estado.idsComErro.add(idComErro);
+      if (
+        estado.musicaInicializacao.ativa
+        && estado.musicaInicializacao.idTentativa === idComErro
+      ) {
+        tratarFalhaMusicaInicializacao(
+          estado.musicaInicializacao.token,
+          idComErro,
+        );
+        return;
+      }
       notificar(
         "Arquivo de música indisponível",
         "A Estação tentará a próxima faixa válida da biblioteca.",
@@ -1305,17 +1656,42 @@
     document.addEventListener("bibliotecaatualizada", (evento) => {
       atualizarEstadoBiblioteca(evento.detail?.biblioteca ?? evento.detail ?? {}, { publicarResumo: false });
     });
+    elementos.telaInicializacao?.addEventListener(
+      "encerramentoinicializacao",
+      () => {
+        const reproducaoFoiAceita = estado.musicaInicializacao.reproducaoSolicitada
+          || !elementos.audio.paused;
+        const reproducaoAindaNaoComecou = estado.musicaInicializacao.ativa
+          && !estado.musicaInicializacao.iniciouReproducao
+          && !reproducaoFoiAceita;
+        finalizarMusicaInicializacao({
+          pausarSePendente: reproducaoAindaNaoComecou,
+          normalizarAudio: false,
+          restaurarSessaoAnterior: reproducaoAindaNaoComecou,
+        });
+      },
+    );
     document.addEventListener("configuracoesalteradas", () => {
       estado.aleatorio = Boolean(obterConfiguracao("estacao.aleatorio", estado.aleatorio));
       estado.repeticao = obterConfiguracao("estacao.repeticao", estado.repeticao);
-      atualizarVolume();
-      atualizarMiniPlayer();
-      atualizarBotoesModos();
-      atualizarDisponibilidadeControles();
       elementos.audio.muted = Boolean(
         obterConfiguracao("estacao.musicaSilenciada", elementos.audio.muted),
       );
       elementos.mute.setAttribute("aria-pressed", String(elementos.audio.muted));
+      atualizarVolume();
+      atualizarMiniPlayer();
+      atualizarBotoesModos();
+      atualizarDisponibilidadeControles();
+      raiz.sons?.informarEstadoMusica?.({
+        tocando: !elementos.audio.paused && !elementos.audio.ended,
+        id: estado.musicaAtualId,
+      });
+      if (
+        estado.musicaInicializacao.ativa
+        && !introducaoPermiteMusica({ exigirVisibilidade: false })
+      ) {
+        concluirTentativasMusicaInicializacao();
+      }
       if (!obterConfiguracao("audio.musica.ativo", true)) pausar();
       if (estado.paginaVisivel) iniciarVisualizador();
       else limparVisualizador();
@@ -1362,6 +1738,11 @@
     window.addEventListener("beforeunload", persistirSessao);
     window.addEventListener("pagehide", () => {
       limparVisualizador();
+      finalizarMusicaInicializacao({
+        pausarSePendente: true,
+        normalizarAudio: true,
+        restaurarSessaoAnterior: true,
+      });
       estado.removerProgressoBiblioteca?.();
     }, { once: true });
     estado.removerProgressoBiblioteca = ponte?.aoProgresso?.(receberProgressoBiblioteca) ?? null;
@@ -1379,17 +1760,30 @@
     estado.paginaVisivel = document.body.dataset.paginaAtiva === "estacao";
     elementos.audio.muted = Boolean(obterConfiguracao("estacao.musicaSilenciada", false));
     elementos.mute.setAttribute("aria-pressed", String(elementos.audio.muted));
-    alternarImersivo(Boolean(obterConfiguracao("estacao.modoImersivo", false)));
+    // O modo imersivo pertence exclusivamente à página Estação. Esta proteção
+    // evita que uma sessão encerrada nesse modo esconda o cabeçalho do painel
+    // na próxima abertura do aplicativo.
+    alternarImersivo(
+      Boolean(obterConfiguracao("estacao.modoImersivo", false)) && estado.paginaVisivel,
+      { imediato: true },
+    );
     atualizarVolume();
     atualizarBotoesModos();
     atualizarDisponibilidadeControles();
-    raiz.sons?.conectarElementoMusica?.(elementos.audio);
+    const promessaConexaoAudio = Promise.resolve(
+      raiz.sons?.conectarElementoMusica?.(elementos.audio),
+    ).catch(() => null);
     await carregarBiblioteca();
+    await promessaConexaoAudio;
+    await iniciarMusicaDaInicializacao();
   }
 
+  const pronto = Promise.resolve().then(iniciar);
   raiz.estacao = Object.freeze({
+    pronto,
     carregarBiblioteca,
     escolherPasta,
+    iniciarMusicaDaInicializacao,
     reproduzir,
     pausar,
     alternarReproducao,
@@ -1407,9 +1801,14 @@
       duracao: obterDuracaoEfetiva(),
       carregando: estado.carregandoAudio,
       ajustandoProgresso: estado.ajustandoProgresso,
+      musicaInicializacao: {
+        avaliada: estado.musicaInicializacao.avaliada,
+        ativa: estado.musicaInicializacao.ativa,
+        aguardandoGesto: estado.musicaInicializacao.aguardandoGesto,
+        iniciouReproducao: estado.musicaInicializacao.iniciouReproducao,
+        reproducaoSolicitada: estado.musicaInicializacao.reproducaoSolicitada,
+      },
     }),
     persistirSessao,
   });
-
-  iniciar();
 })();

@@ -74,6 +74,8 @@
     caminhoBiblioteca: null,
     quantidadeMusicas: null,
     dataBiblioteca: null,
+    listaMusicasAbertura: null,
+    resumoMusicasAbertura: null,
     confirmacaoRedefinir: null,
     amostraCorPersonalizada: null,
   };
@@ -99,6 +101,7 @@
       ultimaAtualizacao: null,
       erros: 0,
     },
+    faixasMusicasAbertura: [],
     informacoesAplicacao: {},
     indiceComandoAtivo: -1,
     leiturasSessao: 0,
@@ -151,6 +154,8 @@
       "#quantidade-musicas-configuracao",
     );
     elementos.dataBiblioteca = documento.querySelector("#data-biblioteca");
+    elementos.listaMusicasAbertura = documento.querySelector("#lista-musicas-abertura");
+    elementos.resumoMusicasAbertura = documento.querySelector("#resumo-musicas-abertura");
     elementos.confirmacaoRedefinir = documento.querySelector("#confirmacao-redefinir-ajustes");
     elementos.amostraCorPersonalizada = documento.querySelector("#amostra-cor-personalizada");
   }
@@ -645,6 +650,7 @@
         String(botao.dataset.perfilAudio === perfilAudioAtual),
       );
     });
+    sincronizarSelecaoMusicasAbertura();
   }
 
   async function registrarValorControle(controle) {
@@ -1274,6 +1280,114 @@
     return Number.isNaN(data.getTime()) ? "Data indisponível" : formatadorDataCurta.format(data);
   }
 
+  function obterIdsMusicasAbertura() {
+    const ids = obterConfiguracao("estacao.musicasInicializacao", []);
+    return Array.isArray(ids)
+      ? [...new Set(ids.map((id) => String(id ?? "").trim()).filter(Boolean))]
+      : [];
+  }
+
+  /**
+   * A lista visual conhece somente o índice atual da biblioteca. IDs de uma
+   * pasta temporariamente indisponível permanecem salvos e voltam a aparecer
+   * marcados quando aquela biblioteca for conectada novamente.
+   */
+  function sincronizarSelecaoMusicasAbertura() {
+    const selecionadas = new Set(obterIdsMusicasAbertura());
+    const idsDisponiveis = estado.faixasMusicasAbertura.map((faixa) => faixa.id);
+    let quantidadeDisponivelSelecionada = 0;
+
+    elementos.listaMusicasAbertura
+      ?.querySelectorAll("[data-musica-inicializacao]")
+      .forEach((controle) => {
+        const selecionada = selecionadas.has(controle.dataset.musicaInicializacao);
+        controle.checked = selecionada;
+        if (selecionada) quantidadeDisponivelSelecionada += 1;
+      });
+
+    if (elementos.resumoMusicasAbertura) {
+      if (!idsDisponiveis.length) {
+        elementos.resumoMusicasAbertura.textContent = "Biblioteca vazia";
+      } else if (!quantidadeDisponivelSelecionada) {
+        elementos.resumoMusicasAbertura.textContent = "Nenhuma selecionada";
+      } else {
+        elementos.resumoMusicasAbertura.textContent = quantidadeDisponivelSelecionada === 1
+          ? "1 música selecionada"
+          : `${quantidadeDisponivelSelecionada} músicas selecionadas`;
+      }
+    }
+
+    const todasSelecionadas = idsDisponiveis.length > 0
+      && idsDisponiveis.every((id) => selecionadas.has(id));
+    const botaoSelecionarTodas = documento.querySelector(
+      '[data-acao-musicas-inicializacao="selecionar-todas"]',
+    );
+    const botaoLimpar = documento.querySelector(
+      '[data-acao-musicas-inicializacao="limpar"]',
+    );
+    if (botaoSelecionarTodas) {
+      botaoSelecionarTodas.disabled = !idsDisponiveis.length || todasSelecionadas;
+    }
+    if (botaoLimpar) botaoLimpar.disabled = selecionadas.size === 0;
+  }
+
+  function renderizarMusicasAbertura() {
+    const lista = elementos.listaMusicasAbertura;
+    if (!lista) return;
+    if (!estado.faixasMusicasAbertura.length) {
+      const mensagem = documento.createElement("p");
+      mensagem.className = "estado-musicas-abertura";
+      mensagem.textContent = "Nenhuma música disponível na biblioteca.";
+      lista.replaceChildren(mensagem);
+      sincronizarSelecaoMusicasAbertura();
+      return;
+    }
+
+    const fragmento = documento.createDocumentFragment();
+    estado.faixasMusicasAbertura.forEach((faixa) => {
+      const item = documento.createElement("label");
+      item.className = "seletor-musica-abertura item-configuracao";
+      item.dataset.termos = `música abertura ${faixa.titulo} ${faixa.artista}`;
+
+      const identificacao = documento.createElement("span");
+      const titulo = documento.createElement("strong");
+      const artista = documento.createElement("small");
+      titulo.textContent = faixa.titulo;
+      artista.textContent = faixa.artista;
+      identificacao.append(titulo, artista);
+
+      const controle = documento.createElement("input");
+      controle.type = "checkbox";
+      controle.dataset.musicaInicializacao = faixa.id;
+      item.append(identificacao, controle);
+      fragmento.append(item);
+    });
+    lista.replaceChildren(fragmento);
+    sincronizarSelecaoMusicasAbertura();
+
+    if (elementos.centralConfiguracoes?.classList.contains("pesquisa-ativa")) {
+      filtrarConfiguracoes(elementos.buscaConfiguracoes?.value ?? "");
+    }
+  }
+
+  async function registrarMusicaAbertura(controle) {
+    const id = String(controle?.dataset.musicaInicializacao ?? "").trim();
+    if (!id) return;
+    const selecionadas = new Set(obterIdsMusicasAbertura());
+    if (controle.checked) selecionadas.add(id);
+    else selecionadas.delete(id);
+    await alterarConfiguracao("estacao.musicasInicializacao", [...selecionadas]);
+    sincronizarSelecaoMusicasAbertura();
+  }
+
+  async function executarAcaoMusicasAbertura(acao) {
+    const ids = acao === "selecionar-todas"
+      ? estado.faixasMusicasAbertura.map((faixa) => faixa.id)
+      : [];
+    await alterarConfiguracao("estacao.musicasInicializacao", ids);
+    sincronizarSelecaoMusicasAbertura();
+  }
+
   function atualizarResumoBiblioteca(biblioteca = {}) {
     estado.resumoBiblioteca = {
       disponivel: Boolean(biblioteca.disponivel),
@@ -1300,6 +1414,20 @@
       elementos.dataBiblioteca.textContent = formatarDataBiblioteca(
         estado.resumoBiblioteca.ultimaAtualizacao,
       );
+    }
+    if (Array.isArray(biblioteca.faixas)) {
+      estado.faixasMusicasAbertura = biblioteca.faixas
+        .map((faixa, indice) => ({
+          id: String(faixa?.id ?? "").trim(),
+          titulo: String(
+            faixa?.titulo
+              || faixa?.nomeArquivo?.replace(/\.[^.]+$/, "")
+              || `Faixa ${indice + 1}`,
+          ),
+          artista: String(faixa?.artista || "Artista desconhecido"),
+        }))
+        .filter((faixa) => faixa.id);
+      renderizarMusicasAbertura();
     }
     atualizarInformacoesSistema();
     // O canal `sistema:obter-informacoes` entrega somente pasta e quantidade.
@@ -1581,6 +1709,16 @@
       return;
     }
 
+    const acaoMusicasAbertura = evento.target.closest?.(
+      "[data-acao-musicas-inicializacao]",
+    );
+    if (acaoMusicasAbertura) {
+      void executarAcaoMusicasAbertura(
+        acaoMusicasAbertura.dataset.acaoMusicasInicializacao,
+      );
+      return;
+    }
+
     const categoria = evento.target.closest?.("[data-categoria-configuracao]");
     if (categoria) {
       if (elementos.buscaConfiguracoes) elementos.buscaConfiguracoes.value = "";
@@ -1634,6 +1772,13 @@
   }
 
   function tratarEntradaDocumento(evento) {
+    const controleMusicaAbertura = evento.target.closest?.(
+      "[data-musica-inicializacao]",
+    );
+    if (controleMusicaAbertura && evento.type === "change") {
+      void registrarMusicaAbertura(controleMusicaAbertura);
+      return;
+    }
     const controle = evento.target.closest?.("[data-configuracao]");
     if (!controle) return;
     const respondeImediatamente = controle instanceof HTMLInputElement
@@ -1790,6 +1935,7 @@
     if (estado.iniciado) return;
     estado.iniciado = true;
     coletarElementos();
+    renderizarMusicasAbertura();
     criarComandosPadraoSeNecessario();
     configurarEventosDialogos();
     configurarEventosCategorias();
