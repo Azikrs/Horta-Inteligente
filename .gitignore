@@ -1,2 +1,18 @@
+# Dependências e builds são reproduzíveis com npm; não pertencem ao código-fonte.
 node_modules/
 out/
+coverage/
+
+# Arquivos temporários de ferramentas, editores e do sistema operacional.
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.tmp
+*.temp
+
+# Uma eventual biblioteca colocada dentro do projeto continua local. A Estação
+# usa a pasta externa escolhida pelo usuário e não envia músicas ao GitHub.
+musicas/

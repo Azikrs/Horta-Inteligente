@@ -149,6 +149,10 @@
     if (painelLiberado) return;
     painelLiberado = true;
 
+    // Informa aos recursos complementares que a transição visual começou.
+    // O som usa este evento para desaparecer sem controlar o tempo do painel.
+    tela.dispatchEvent(new CustomEvent("encerramentoinicializacao"));
+
     // O painel só é renderizado neste momento. Ele já recebeu a leitura válida
     // por trás da tela, mas permaneceu oculto e fora da navegação por teclado.
     painel.hidden = false;

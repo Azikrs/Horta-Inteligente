@@ -36,17 +36,28 @@ function calcularValorBruto(umidadeSolo) {
   return Math.round(limitarValor(leituraComRuido, LIMITE_MINIMO_SENSOR, LIMITE_MAXIMO_SENSOR));
 }
 
-/**
- * Usa o horário local para criar um ciclo de luz plausível. Isso permite ver a
- * iluminação auxiliar ligada à noite e desligada quando há luz natural suficiente.
- */
-function calcularLuminosidadeAlvo() {
-  const horaAtual = new Date().getHours();
+function obterConfiguracao(caminho, valorPadrao) {
+  return escopoAplicacao.HortaInteligente?.configuracoes?.obter?.(caminho, valorPadrao)
+    ?? valorPadrao;
+}
 
-  if (horaAtual >= 8 && horaAtual < 17) return 76;
-  if (horaAtual >= 6 && horaAtual < 8) return 48;
-  if (horaAtual >= 17 && horaAtual < 19) return 42;
-  return 22;
+function horarioParaSegundos(horario, padrao) {
+  const [horas, minutos] = String(horario ?? padrao).split(":").map(Number);
+  if (!Number.isFinite(horas) || !Number.isFinite(minutos)) return horarioParaSegundos(padrao, "00:00");
+  return (horas * 3600) + (minutos * 60);
+}
+
+function formatarRtc(segundos) {
+  const normalizado = ((segundos % 86400) + 86400) % 86400;
+  const horas = Math.floor(normalizado / 3600);
+  const minutos = Math.floor((normalizado % 3600) / 60);
+  const segundosRestantes = Math.floor(normalizado % 60);
+  return [horas, minutos, segundosRestantes].map((valor) => String(valor).padStart(2, "0")).join(":");
+}
+
+function horarioDentroDoCiclo(atual, inicio, fim) {
+  if (inicio === fim) return false;
+  return inicio < fim ? atual >= inicio && atual < fim : atual >= inicio || atual < fim;
 }
 
 function gerarHistoricoInicial(valorCentral) {
@@ -70,14 +81,14 @@ function gerarHistoricoInicial(valorCentral) {
  * objetos com o mesmo formato, sem alterar a lógica visual de `principal.js`.
  */
 function criarSimuladorHorta({ intervaloAtualizacao = 4000 } = {}) {
-  const luminosidadeInicial = calcularLuminosidadeAlvo() + gerarVariacao(-3, 3);
+  const agora = new Date();
   const estadoSimulado = {
-    umidadeSolo: 64.8,
-    luminosidade: limitarValor(luminosidadeInicial, 0, 100),
+    umidadeSolo: 49.5,
     bombaLigada: false,
-    iluminacaoLigada: luminosidadeInicial < 35,
+    iluminacaoLigada: false,
     numeroLeitura: 1841,
-    historicoUmidade: gerarHistoricoInicial(64.8),
+    segundosRtc: (agora.getHours() * 3600) + (agora.getMinutes() * 60) + agora.getSeconds(),
+    historicoUmidade: gerarHistoricoInicial(49.5),
   };
 
   let identificadorIntervalo = null;
@@ -85,15 +96,17 @@ function criarSimuladorHorta({ intervaloAtualizacao = 4000 } = {}) {
   let simulacaoPausada = false;
 
   /**
-   * Faz os dados evoluírem aos poucos. A histerese dos atuadores usa limites
-   * diferentes para ligar e desligar, evitando alternâncias rápidas perto do corte.
-   * A faixa entre 45% (conforto visual) e 36% (acionamento) funciona como margem
-   * de observação, para que a bomba não ligue após qualquer pequena oscilação.
+   * Faz os dados evoluírem em um ritmo acelerado de demonstração. A histerese
+   * dos atuadores usa limites diferentes para ligar e desligar, evitando
+   * alternâncias rápidas perto do corte.
+   * Os limites vêm da mesma configuração lida pelo painel. No modo simulado o
+   * RTC avança trinta minutos por pacote para tornar o ciclo da Grow Light
+   * observável durante uma apresentação, sem inventar um sensor de luz.
    */
   function atualizarAmbienteSimulado() {
     const variacaoUmidade = estadoSimulado.bombaLigada
-      ? gerarVariacao(0.8, 1.5)
-      : gerarVariacao(-0.34, -0.06);
+      ? gerarVariacao(2.2, 3.1)
+      : gerarVariacao(-1, -0.62);
 
     estadoSimulado.umidadeSolo = limitarValor(
       estadoSimulado.umidadeSolo + variacaoUmidade,
@@ -101,25 +114,20 @@ function criarSimuladorHorta({ intervaloAtualizacao = 4000 } = {}) {
       100,
     );
 
-    if (!estadoSimulado.bombaLigada && estadoSimulado.umidadeSolo < 36) {
+    const limiteMinimo = limitarValor(Number(obterConfiguracao("horta.limiteUmidadeMinima", 45)), 5, 95);
+    const limiteMaximo = limitarValor(Number(obterConfiguracao("horta.limiteUmidadeMaxima", 72)), limiteMinimo + 1, 100);
+    const limiteDesligamento = Math.min(limiteMaximo, limiteMinimo + 15);
+
+    if (!estadoSimulado.bombaLigada && estadoSimulado.umidadeSolo < limiteMinimo) {
       estadoSimulado.bombaLigada = true;
-    } else if (estadoSimulado.bombaLigada && estadoSimulado.umidadeSolo > 60) {
+    } else if (estadoSimulado.bombaLigada && estadoSimulado.umidadeSolo > limiteDesligamento) {
       estadoSimulado.bombaLigada = false;
     }
 
-    const alvoLuminosidade = calcularLuminosidadeAlvo();
-    const aproximacaoDoAlvo = (alvoLuminosidade - estadoSimulado.luminosidade) * 0.08;
-    estadoSimulado.luminosidade = limitarValor(
-      estadoSimulado.luminosidade + aproximacaoDoAlvo + gerarVariacao(-1.2, 1.2),
-      0,
-      100,
-    );
-
-    if (!estadoSimulado.iluminacaoLigada && estadoSimulado.luminosidade < 34) {
-      estadoSimulado.iluminacaoLigada = true;
-    } else if (estadoSimulado.iluminacaoLigada && estadoSimulado.luminosidade > 44) {
-      estadoSimulado.iluminacaoLigada = false;
-    }
+    estadoSimulado.segundosRtc = (estadoSimulado.segundosRtc + 1800) % 86400;
+    const inicio = horarioParaSegundos(obterConfiguracao("horta.horarioIluminacaoInicio", "08:00"), "08:00");
+    const fim = horarioParaSegundos(obterConfiguracao("horta.horarioIluminacaoFim", "20:00"), "20:00");
+    estadoSimulado.iluminacaoLigada = horarioDentroDoCiclo(estadoSimulado.segundosRtc, inicio, fim);
   }
 
   /**
@@ -131,7 +139,8 @@ function criarSimuladorHorta({ intervaloAtualizacao = 4000 } = {}) {
     atualizarAmbienteSimulado();
 
     const umidadeSolo = arredondar(estadoSimulado.umidadeSolo, 1);
-    const luminosidade = arredondar(estadoSimulado.luminosidade, 0);
+    const horarioIluminacaoInicio = obterConfiguracao("horta.horarioIluminacaoInicio", "08:00");
+    const horarioIluminacaoFim = obterConfiguracao("horta.horarioIluminacaoFim", "20:00");
 
     estadoSimulado.numeroLeitura += 1;
     estadoSimulado.historicoUmidade.push(umidadeSolo);
@@ -141,9 +150,10 @@ function criarSimuladorHorta({ intervaloAtualizacao = 4000 } = {}) {
       umidadeSolo,
       valorBrutoSensor: calcularValorBruto(umidadeSolo),
       bombaLigada: estadoSimulado.bombaLigada,
-      luminosidade,
-      luminosidadeLux: Math.round(luminosidade * 240 + gerarVariacao(-90, 90)),
       iluminacaoLigada: estadoSimulado.iluminacaoLigada,
+      horarioRtc: formatarRtc(estadoSimulado.segundosRtc),
+      horarioIluminacaoInicio,
+      horarioIluminacaoFim,
       estadoArduino: {
         conexao: "conectado",
         porta: "COM4 · simulada",
@@ -229,7 +239,13 @@ function criarSimuladorHorta({ intervaloAtualizacao = 4000 } = {}) {
  * simulador continua privado e não disputa nomes com `principal.js`.
  */
 const hortaInteligente = escopoAplicacao.HortaInteligente ?? {};
-hortaInteligente.criarFonteDados = criarSimuladorHorta;
 hortaInteligente.criarSimuladorHorta = criarSimuladorHorta;
+
+// No projeto atual, o simulador é a fonte selecionada. Se um módulo Serial já
+// tiver registrado uma fonte explícita, este arquivo nunca a substitui por
+// dados falsos — comportamento importante para a futura versão do CaseMod.
+if (typeof hortaInteligente.criarFonteDados !== "function") {
+  hortaInteligente.criarFonteDados = criarSimuladorHorta;
+}
 escopoAplicacao.HortaInteligente = hortaInteligente;
 })(window);

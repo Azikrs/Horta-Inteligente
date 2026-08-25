@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
     />
     <meta
       name="description"
-      content="Painel de monitoramento da Horta Inteligente: umidade, luminosidade, irrigação e conexão com o Arduino."
+      content="Painel de monitoramento da Horta Inteligente: umidade do solo, irrigação, ciclo da Grow Light e conexão com o Arduino."
     />
     <meta name="theme-color" content="#07110f" />
     <title>Horta Inteligente | Painel de monitoramento</title>
@@ -76,10 +76,44 @@
           <span><strong>INICIALIZANDO</strong><small>/ SISTEMA 01</small></span>
         </div>
 
-        <div class="metadados-inicializacao">
-          <span><i></i> SISTEMA LOCAL</span>
-          <span>CASEMOD / CULTIVO</span>
-          <span class="modo-inicializacao" id="modo-inicializacao">FONTE EM ANÁLISE</span>
+        <div class="controles-topo-inicializacao">
+          <div class="metadados-inicializacao">
+            <span><i></i> SISTEMA LOCAL</span>
+            <span>CASEMOD / CULTIVO</span>
+            <span class="modo-inicializacao" id="modo-inicializacao">FONTE EM ANÁLISE</span>
+          </div>
+
+          <button
+            class="botao-som-inicializacao"
+            id="botao-som-inicializacao"
+            data-controle-som
+            type="button"
+            aria-pressed="true"
+            aria-label="Som da interface ligado"
+            title="Desativar som da interface"
+          >
+            <svg class="icone-som-inicializacao" viewBox="0 0 24 24" aria-hidden="true">
+              <path class="corpo-icone-som" d="M4 9.5h3.2L11 6.4v11.2l-3.8-3.1H4z" />
+              <path class="ondas-icone-som" d="M14.3 9.1c1.4 1.6 1.4 4.2 0 5.8M17 6.8c2.7 2.9 2.7 7.5 0 10.4" />
+              <path class="corte-icone-som" d="m5.2 5.2 13.6 13.6" />
+            </svg>
+            <span id="texto-som-inicializacao" data-texto-som>SOM LIGADO</span>
+          </button>
+
+          <button
+            class="botao-configuracoes-inicializacao"
+            id="botao-configuracoes-inicializacao"
+            data-abrir-configuracoes
+            type="button"
+            aria-label="Abrir Central de Configurações"
+            aria-haspopup="dialog"
+            title="Central de Configurações"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" />
+              <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.86 1.86-.06-.06A1.7 1.7 0 0 0 16 18.4a1.7 1.7 0 0 0-1 1.55V20h-2.64v-.05a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.88.34l-.06.06-1.86-1.86.06-.06A1.7 1.7 0 0 0 7.96 15a1.7 1.7 0 0 0-1.55-1H6.3v-2.64h.11a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.88l-.06-.06 1.86-1.86.06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1-1.55V5.3H15v.11a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.88-.34l.06-.06 1.86 1.86-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.55 1h.05V14h-.05a1.7 1.7 0 0 0-1.55 1Z" />
+            </svg>
+          </button>
         </div>
       </header>
 
@@ -190,6 +224,28 @@
           </div>
         </div>
 
+        <nav class="navegacao-principal" aria-label="Áreas do software">
+          <button type="button" data-abrir-pagina="dashboard" aria-current="page">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 4h6v7H4zM14 4h6v4h-6zM14 12h6v8h-6zM4 15h6v5H4z" />
+            </svg>
+            <span>Painel</span>
+          </button>
+          <button type="button" data-abrir-pagina="estacao">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 18V5l10-2v13M9 9l10-2M6 21c1.66 0 3-1.12 3-2.5S7.66 16 6 16s-3 1.12-3 2.5S4.34 21 6 21Zm10-2c1.66 0 3-1.12 3-2.5S17.66 14 16 14s-3 1.12-3 2.5 1.34 2.5 3 2.5Z" />
+            </svg>
+            <span>Estação</span>
+          </button>
+          <button type="button" data-abrir-configuracoes aria-haspopup="dialog">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" />
+              <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.86 1.86-.06-.06A1.7 1.7 0 0 0 16 18.4a1.7 1.7 0 0 0-1 1.55V20h-2.64v-.05a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.88.34l-.06.06-1.86-1.86.06-.06A1.7 1.7 0 0 0 7.96 15a1.7 1.7 0 0 0-1.55-1H6.3v-2.64h.11a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.88l-.06-.06 1.86-1.86.06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1-1.55V5.3H15v.11a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.88-.34l.06-.06 1.86 1.86-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.55 1h.05V14h-.05a1.7 1.7 0 0 0-1.55 1Z" />
+            </svg>
+            <span>Configurações</span>
+          </button>
+        </nav>
+
         <div class="acoes-cabecalho">
           <div class="selo-fonte" id="selo-fonte-dados" title="Fonte usada pelo painel">
             <span class="selo-fonte-icone" id="sigla-fonte-dados" aria-hidden="true">SIM</span>
@@ -206,6 +262,23 @@
               <strong id="texto-estado-cabecalho">Inicializando</strong>
             </span>
           </div>
+
+          <button
+            class="botao-controle botao-controle--som"
+            id="botao-som-painel"
+            data-controle-som
+            type="button"
+            aria-pressed="true"
+            aria-label="Som da interface ligado"
+            title="Desativar som da interface"
+          >
+            <svg class="icone-som-painel" viewBox="0 0 24 24" aria-hidden="true">
+              <path class="corpo-som-painel" d="M4 9.5h3.2L11 6.4v11.2l-3.8-3.1H4z" />
+              <path class="ondas-som-painel" d="M14.3 9.1c1.4 1.6 1.4 4.2 0 5.8M17 6.8c2.7 2.9 2.7 7.5 0 10.4" />
+              <path class="corte-som-painel" d="m5.2 5.2 13.6 13.6" />
+            </svg>
+            <span data-texto-som>Som ligado</span>
+          </button>
 
           <button
             class="botao-controle"
@@ -227,6 +300,7 @@
     </header>
 
     <main class="limite-conteudo conteudo-principal" id="conteudo-principal">
+      <section class="pagina-aplicacao pagina-dashboard" id="pagina-dashboard" data-pagina="dashboard">
       <section class="abertura-painel" aria-labelledby="titulo-painel">
         <div>
           <p class="sobretitulo"><span></span> Monitoramento ambiental</p>
@@ -236,16 +310,25 @@
           </p>
         </div>
 
-        <div class="carimbo-atualizacao">
-          <span class="icone-atividade" aria-hidden="true">
-            <i></i>
-            <i></i>
-            <i></i>
-          </span>
-          <span>
-            <small>Última atualização</small>
-            <strong id="tempo-relativo">Aguardando dados</strong>
-          </span>
+        <div class="informacoes-abertura">
+          <div class="estado-geral-compacto" id="estado-geral-compacto">
+            <i aria-hidden="true"></i>
+            <span>
+              <small>Estado geral</small>
+              <strong id="texto-estado-geral-compacto">Inicializando</strong>
+            </span>
+          </div>
+          <div class="carimbo-atualizacao">
+            <span class="icone-atividade" aria-hidden="true">
+              <i></i>
+              <i></i>
+              <i></i>
+            </span>
+            <span>
+              <small>Última atualização</small>
+              <strong id="tempo-relativo">Aguardando dados</strong>
+            </span>
+          </div>
         </div>
       </section>
 
@@ -279,10 +362,25 @@
                 <h3>Umidade do solo</h3>
               </span>
             </div>
-            <span class="etiqueta-condicao" id="etiqueta-umidade">
-              <i aria-hidden="true"></i>
-              <span id="texto-etiqueta-umidade">Analisando</span>
-            </span>
+            <div class="acoes-cartao">
+              <span class="etiqueta-condicao" id="etiqueta-umidade">
+                <i aria-hidden="true"></i>
+                <span id="texto-etiqueta-umidade">Analisando</span>
+              </span>
+              <button
+                class="botao-explorar-cartao"
+                type="button"
+                data-abrir-detalhes="umidade"
+                aria-haspopup="dialog"
+                aria-controls="painel-detalhes"
+                title="Explorar detalhes da umidade"
+              >
+                <span>Explorar</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m9 6 6 6-6 6" />
+                </svg>
+              </button>
+            </div>
           </header>
 
           <div class="conteudo-umidade">
@@ -296,7 +394,17 @@
               aria-valuenow="0"
               style="--valor-medidor: 0"
             >
-              <div class="circulo-medidor">
+              <div class="circulo-medidor" data-estado-solo="analisando">
+                <span class="nivel-vivo-umidade" aria-hidden="true">
+                  <i></i><i></i><i></i>
+                </span>
+                <svg class="raizes-medidor" viewBox="0 0 100 72" aria-hidden="true">
+                  <path d="M50 2v24M50 19 31 35M50 27l18 15M31 35 17 57M31 35l3 27M68 42l-2 20M68 42l17 14" />
+                  <circle cx="14" cy="57" r="2" />
+                  <circle cx="34" cy="62" r="2" />
+                  <circle cx="66" cy="62" r="2" />
+                  <circle cx="85" cy="56" r="2" />
+                </svg>
                 <svg class="folha-medidor" viewBox="0 0 28 28" aria-hidden="true">
                   <path d="M23 4C12.2 4.2 5.7 8.6 5.2 16.1c-.3 4.4 3.1 7.6 7.5 7.3C20.1 22.8 24 15.7 23 4Z" />
                   <path d="M5 24c3.4-6.6 7.8-10.3 13.8-13" />
@@ -321,7 +429,7 @@
                 </div>
                 <div>
                   <dt>Faixa de conforto</dt>
-                  <dd><strong>45–72</strong><span>%</span></dd>
+                  <dd><strong id="faixa-conforto-umidade">45–72</strong><span>%</span></dd>
                 </div>
               </dl>
             </div>
@@ -348,13 +456,28 @@
               <p class="rotulo-cartao">Controle automático</p>
               <h3>Atuadores</h3>
             </div>
-            <span class="selo-automatico">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.64 5.64l2.12 2.12M16.24 16.24l2.12 2.12M18.36 5.64l-2.12 2.12M7.76 16.24l-2.12 2.12" />
-                <circle cx="12" cy="12" r="3.5" />
-              </svg>
-              Automático
-            </span>
+            <div class="acoes-cartao">
+              <span class="selo-automatico">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.64 5.64l2.12 2.12M16.24 16.24l2.12 2.12M18.36 5.64l-2.12 2.12M7.76 16.24l-2.12 2.12" />
+                  <circle cx="12" cy="12" r="3.5" />
+                </svg>
+                Automático
+              </span>
+              <button
+                class="botao-explorar-cartao botao-explorar-cartao--compacto"
+                type="button"
+                data-abrir-detalhes="automacao"
+                aria-haspopup="dialog"
+                aria-controls="painel-detalhes"
+                aria-label="Explorar detalhes dos atuadores"
+                title="Explorar detalhes dos atuadores"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m9 6 6 6-6 6" />
+                </svg>
+              </button>
+            </div>
           </header>
 
           <div class="lista-atuadores">
@@ -372,6 +495,12 @@
                   <circle cx="13" cy="19" r="3.2" />
                   <path class="gota-bomba" d="M27.8 24.5s-2.3 2.6-2.3 4.2a2.3 2.3 0 0 0 4.6 0c0-1.6-2.3-4.2-2.3-4.2Z" />
                 </svg>
+              </span>
+              <span class="fluxo-irrigacao" aria-hidden="true">
+                <i class="trilha-agua"></i>
+                <i class="particula-agua particula-agua--um"></i>
+                <i class="particula-agua particula-agua--dois"></i>
+                <i class="particula-agua particula-agua--tres"></i>
               </span>
               <span class="texto-atuador">
                 <small id="titulo-bomba">Bomba de irrigação</small>
@@ -394,10 +523,13 @@
                   <path d="M12 27h8M13.5 30h5M16 4V1M5.4 8 3 6.5M26.6 8 29 6.5" />
                 </svg>
               </span>
+              <span class="feixe-iluminacao" aria-hidden="true">
+                <i></i><i></i><i></i>
+              </span>
               <span class="texto-atuador">
-                <small id="titulo-iluminacao">Iluminação auxiliar</small>
+                <small id="titulo-iluminacao">Grow Light</small>
                 <strong id="estado-iluminacao" role="status" aria-atomic="true">Aguardando</strong>
-                <span id="descricao-iluminacao">Analisando luz ambiente</span>
+                <span id="descricao-iluminacao">Aguardando o ciclo programado</span>
               </span>
               <span class="chave-estado" aria-hidden="true"><i></i></span>
             </section>
@@ -411,7 +543,7 @@
           </footer>
         </article>
 
-        <article class="cartao cartao-luminosidade">
+        <article class="cartao cartao-luminosidade cartao-ciclo-iluminacao" id="cartao-ciclo-iluminacao">
           <header class="cabecalho-cartao">
             <div class="titulo-cartao">
               <span class="icone-cartao icone-cartao--amarelo" aria-hidden="true">
@@ -421,33 +553,52 @@
                 </svg>
               </span>
               <span>
-                <small>Ambiente</small>
-                <h3>Luminosidade</h3>
+                <small>Automação temporal</small>
+                <h3>Ciclo da Grow Light</h3>
               </span>
             </div>
-            <span class="indicador-tendencia" id="tendencia-luminosidade">Estável</span>
+            <div class="acoes-cartao">
+              <span class="indicador-tendencia" id="estado-ciclo-iluminacao">Programado</span>
+              <button
+                class="botao-explorar-cartao botao-explorar-cartao--compacto"
+                type="button"
+                data-abrir-detalhes="iluminacao"
+                aria-haspopup="dialog"
+                aria-controls="painel-detalhes"
+                aria-label="Explorar detalhes do ciclo da Grow Light"
+                title="Explorar ciclo da Grow Light"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m9 6 6 6-6 6" />
+                </svg>
+              </button>
+            </div>
           </header>
 
-          <div class="valor-luminosidade">
-            <span><strong id="valor-luminosidade">--</strong><small>%</small></span>
-            <p><strong id="valor-lux">-----</strong> lux</p>
+          <div class="valor-luminosidade valor-ciclo-iluminacao">
+            <span class="intervalo-ciclo-iluminacao">
+              <strong id="horario-inicio-iluminacao">08:00</strong>
+              <small aria-hidden="true">→</small>
+              <strong id="horario-fim-iluminacao">20:00</strong>
+            </span>
+            <p><small>PRÓXIMA AÇÃO</small><strong id="proxima-acao-iluminacao">Aguardando RTC</strong></p>
           </div>
 
           <div
             class="barra-progresso"
-            id="barra-luminosidade"
+            id="barra-ciclo-iluminacao"
             role="progressbar"
-            aria-label="Nível de luminosidade"
+            aria-label="Progresso do ciclo diário da Grow Light"
             aria-valuemin="0"
             aria-valuemax="100"
             aria-valuenow="0"
           >
-            <span id="preenchimento-luminosidade"></span>
+            <span id="preenchimento-ciclo-iluminacao"><i id="marcador-rtc-iluminacao"></i></span>
           </div>
           <div class="legenda-progresso">
-            <span>Baixa</span><span>Confortável</span><span>Intensa</span>
+            <span id="legenda-inicio-iluminacao">08:00</span><span id="horario-rtc-iluminacao">RTC --:--:--</span><span id="legenda-fim-iluminacao">20:00</span>
           </div>
-          <p class="leitura-contextual" id="leitura-luminosidade">Aguardando leitura do ambiente.</p>
+          <p class="leitura-contextual" id="leitura-ciclo-iluminacao">Aguardando a programação enviada pelo sistema.</p>
         </article>
 
         <article class="cartao cartao-arduino" id="cartao-arduino" data-conexao="conectando">
@@ -456,10 +607,25 @@
               <p class="rotulo-cartao">Dispositivo</p>
               <h3>Status do Arduino</h3>
             </div>
-            <span class="etiqueta-conexao" id="etiqueta-conexao">
-              <i aria-hidden="true"></i>
-              <span id="estado-arduino" role="status" aria-atomic="true">Conectando</span>
-            </span>
+            <div class="acoes-cartao">
+              <span class="etiqueta-conexao" id="etiqueta-conexao">
+                <i aria-hidden="true"></i>
+                <span id="estado-arduino" role="status" aria-atomic="true">Conectando</span>
+              </span>
+              <button
+                class="botao-explorar-cartao botao-explorar-cartao--compacto"
+                type="button"
+                data-abrir-detalhes="arduino"
+                aria-haspopup="dialog"
+                aria-controls="painel-detalhes"
+                aria-label="Explorar detalhes da comunicação com o Arduino"
+                title="Explorar comunicação com o Arduino"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m9 6 6 6-6 6" />
+                </svg>
+              </button>
+            </div>
           </header>
 
           <div class="corpo-arduino">
@@ -541,6 +707,8 @@
               preserveAspectRatio="none"
               role="img"
               aria-label="Histórico recente da umidade do solo"
+              aria-describedby="instrucoes-grafico"
+              tabindex="0"
             >
               <defs>
                 <linearGradient id="gradiente-historico" x1="0" y1="0" x2="0" y2="1">
@@ -564,62 +732,389 @@
               <path id="area-historico" class="area-historico" d="" />
               <polyline id="linha-historico" class="linha-historico" points="" />
               <circle id="ponto-historico" class="ponto-historico" cx="0" cy="0" r="5" />
+              <line
+                id="linha-cursor-historico"
+                class="linha-cursor-historico"
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="180"
+                hidden
+              />
+              <circle
+                id="ponto-cursor-historico"
+                class="ponto-cursor-historico"
+                cx="0"
+                cy="0"
+                r="6"
+                hidden
+              />
             </svg>
+            <div class="balao-grafico" id="balao-grafico" aria-hidden="true" hidden>
+              <small id="horario-balao-grafico">Agora</small>
+              <strong><span id="valor-balao-grafico">--</span>%</strong>
+            </div>
             <div class="rotulos-tempo-grafico" aria-hidden="true">
               <span>Leituras anteriores</span><span>Agora</span>
             </div>
+            <p class="somente-leitor" id="instrucoes-grafico">
+              Explore as leituras com o ponteiro ou use as setas do teclado quando o gráfico estiver em foco.
+            </p>
+            <span
+              class="somente-leitor"
+              id="anuncio-grafico"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            ></span>
           </div>
         </article>
 
         <article class="cartao cartao-fluxo">
           <header class="cabecalho-cartao">
             <div>
-              <p class="rotulo-cartao">Arquitetura preparada</p>
-              <h3>Fluxo dos dados</h3>
+              <p class="rotulo-cartao">Monitoramento vivo</p>
+              <h3>Atividade do sistema</h3>
             </div>
-            <span class="etiqueta-fluxo">Em execução</span>
+            <div class="abas-cartao" role="tablist" aria-label="Visualização da atividade">
+              <button
+                id="aba-atividades"
+                type="button"
+                role="tab"
+                aria-selected="true"
+                aria-controls="painel-atividades"
+              >Atividade</button>
+              <button
+                id="aba-fluxo"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="painel-fluxo"
+                tabindex="-1"
+              >Fluxo</button>
+            </div>
           </header>
 
           <div
-            class="fluxo-dados"
-            id="fluxo-dados"
-            aria-label="Simulador envia dados da horta para a interface"
+            class="painel-aba painel-aba--atividades"
+            id="painel-atividades"
+            role="tabpanel"
+            aria-labelledby="aba-atividades"
+            tabindex="0"
           >
-            <div class="no-fluxo no-fluxo--ativo">
-              <span aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M8 5.5 3 12l5 6.5M16 5.5l5 6.5-5 6.5M14 3l-4 18" />
-                </svg>
-              </span>
-              <p><small>Fonte atual</small><strong id="nome-fonte-fluxo">Simulador</strong></p>
-            </div>
-            <span class="conector-fluxo" aria-hidden="true"><i></i></span>
-            <div class="no-fluxo">
-              <span aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" />
-                </svg>
-              </span>
-              <p><small>Contrato</small><strong>Dados da horta</strong></p>
-            </div>
-            <span class="conector-fluxo" aria-hidden="true"><i></i></span>
-            <div class="no-fluxo">
-              <span aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <rect x="3" y="4" width="18" height="13" rx="2" />
-                  <path d="M8 21h8M12 17v4" />
-                </svg>
-              </span>
-              <p><small>Destino</small><strong>Interface</strong></p>
-            </div>
+            <ol class="lista-atividades" id="lista-atividades">
+              <li class="atividade-vazia">A primeira leitura aparecerá aqui.</li>
+            </ol>
+            <span
+              class="somente-leitor"
+              id="anuncio-atividade"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            ></span>
           </div>
 
-          <p class="nota-fluxo" id="nota-fonte-dados">
-            A fonte poderá ser trocada pelo Arduino Serial sem alterar os cartões do painel.
-          </p>
+          <div
+            class="painel-aba painel-aba--fluxo"
+            id="painel-fluxo"
+            role="tabpanel"
+            aria-labelledby="aba-fluxo"
+            tabindex="0"
+            hidden
+          >
+            <span class="etiqueta-fluxo">Em execução</span>
+            <div
+              class="fluxo-dados"
+              id="fluxo-dados"
+              aria-label="Simulador envia dados da horta para a interface"
+            >
+              <div class="no-fluxo no-fluxo--ativo">
+                <span aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M8 5.5 3 12l5 6.5M16 5.5l5 6.5-5 6.5M14 3l-4 18" />
+                  </svg>
+                </span>
+                <p><small>Fonte atual</small><strong id="nome-fonte-fluxo">Simulador</strong></p>
+              </div>
+              <span class="conector-fluxo" aria-hidden="true"><i></i></span>
+              <div class="no-fluxo">
+                <span aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" />
+                  </svg>
+                </span>
+                <p><small>Contrato</small><strong>Dados da horta</strong></p>
+              </div>
+              <span class="conector-fluxo" aria-hidden="true"><i></i></span>
+              <div class="no-fluxo">
+                <span aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <rect x="3" y="4" width="18" height="13" rx="2" />
+                    <path d="M8 21h8M12 17v4" />
+                  </svg>
+                </span>
+                <p><small>Destino</small><strong>Interface</strong></p>
+              </div>
+            </div>
+
+            <p class="nota-fluxo" id="nota-fonte-dados">
+              A fonte poderá ser trocada pelo Arduino Serial sem alterar os cartões do painel.
+            </p>
+          </div>
         </article>
       </section>
+      </section>
+
+      <section
+        class="pagina-aplicacao pagina-estacao"
+        id="pagina-estacao"
+        data-pagina="estacao"
+        data-estado-biblioteca="vazia"
+        hidden
+        inert
+        aria-labelledby="titulo-estacao"
+      >
+        <div class="atmosfera-estacao" aria-hidden="true">
+          <span class="cor-capa-estacao"></span>
+          <span class="grade-estacao"></span>
+        </div>
+
+        <header class="cabecalho-estacao">
+          <div>
+            <p class="sobretitulo"><span></span> Central multimídia local</p>
+            <h2 id="titulo-estacao">Estação</h2>
+            <p id="saudacao-estacao">Sua trilha sonora, em sintonia com o cultivo.</p>
+          </div>
+          <div class="acoes-estacao">
+            <button class="botao-secundario-estacao" id="botao-biblioteca-estacao" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3zM3 7V5h7l2 2" /></svg>
+              Biblioteca
+            </button>
+            <button class="botao-secundario-estacao" id="botao-modo-imersivo" type="button" aria-pressed="false">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" /></svg>
+              Modo imersivo
+            </button>
+          </div>
+        </header>
+
+        <section class="estado-vazio-estacao" id="estado-vazio-estacao" aria-labelledby="titulo-estado-vazio">
+          <div class="sinal-biblioteca" aria-hidden="true">
+            <span></span><span></span><span></span><i></i>
+          </div>
+          <p class="rotulo-cartao">Biblioteca local</p>
+          <h3 id="titulo-estado-vazio">Dê uma trilha sonora ao CaseMod.</h3>
+          <p id="descricao-estado-vazio">
+            Escolha uma pasta com suas músicas. A Estação lê os arquivos no próprio computador,
+            funciona offline e não altera nenhum original.
+          </p>
+          <button class="botao-principal-estacao" id="botao-escolher-pasta-vazio" type="button">
+            Escolher pasta de músicas
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+          </button>
+          <div class="progresso-biblioteca" id="progresso-biblioteca" hidden>
+            <span><i id="barra-progresso-biblioteca"></i></span>
+            <p id="texto-progresso-biblioteca">Preparando leitura da biblioteca...</p>
+          </div>
+          <small>MP3, FLAC, WAV, OGG, OPUS, AAC e M4A</small>
+        </section>
+
+        <div class="conteudo-estacao" id="conteudo-estacao" hidden>
+          <section class="palco-estacao" aria-label="Reprodutor da Estação">
+            <div class="visual-musica-estacao">
+              <canvas id="visualizador-estacao" class="visualizador-estacao" aria-hidden="true"></canvas>
+              <div class="halo-capa-estacao" aria-hidden="true"></div>
+              <div class="capa-estacao" id="capa-estacao" data-tem-capa="false">
+                <img id="imagem-capa-estacao" alt="" hidden />
+                <div class="capa-generativa" id="capa-generativa" aria-hidden="true">
+                  <span>HI</span><i></i><i></i><i></i>
+                </div>
+                <span class="selo-capa-estacao">ESTAÇÃO / LOCAL</span>
+              </div>
+              <div class="indicador-estereo" aria-label="Sinal de áudio">
+                <span><i id="nivel-estereo-esquerdo"></i></span>
+                <span><i id="nivel-estereo-direito"></i></span>
+              </div>
+            </div>
+
+            <div class="controles-principais-estacao">
+              <div class="estado-reproducao-estacao">
+                <span class="ponto-reproducao" aria-hidden="true"></span>
+                <span id="estado-reproducao-estacao">Pronta para reproduzir</span>
+                <small id="tempo-tocando-estacao">Biblioteca local</small>
+              </div>
+
+              <div class="identificacao-musica">
+                <div>
+                  <h3 id="titulo-musica-estacao">Escolha uma música</h3>
+                  <p id="artista-musica-estacao">Sua biblioteca aparecerá abaixo</p>
+                  <span id="album-musica-estacao">ESTAÇÃO HORTA INTELIGENTE</span>
+                </div>
+                <button
+                  class="botao-favorito-estacao"
+                  id="botao-favorito-estacao"
+                  type="button"
+                  aria-pressed="false"
+                  aria-label="Adicionar música às favoritas"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z" /></svg>
+                </button>
+              </div>
+
+              <div class="progresso-musica-estacao">
+                <label class="rotulo-oculto" for="controle-progresso-musica">Posição da música</label>
+                <input id="controle-progresso-musica" type="range" min="0" max="1000" value="0" />
+                <div><span id="tempo-atual-musica">0:00</span><span id="tempo-restante-musica">−0:00</span></div>
+              </div>
+
+              <div class="acoes-reproducao-estacao">
+                <button type="button" data-acao-player="aleatorio" aria-pressed="false" aria-label="Reprodução aleatória" title="Aleatório">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3h5v5M4 20l5.5-5.5M21 16v5h-5M4 4l16.5 16.5M15 8.5 20.5 3" /></svg>
+                </button>
+                <button type="button" data-acao-player="anterior" aria-label="Música anterior">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M18 6l-8 6 8 6Z" /></svg>
+                </button>
+                <button class="botao-reproduzir-estacao" type="button" data-acao-player="alternar" aria-label="Reproduzir">
+                  <svg class="icone-reproduzir" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 9 6-9 6Z" /></svg>
+                  <svg class="icone-pausar-musica" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v12M15 6v12" /></svg>
+                </button>
+                <button type="button" data-acao-player="proxima" aria-label="Próxima música">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14M6 6l8 6-8 6Z" /></svg>
+                </button>
+                <button type="button" data-acao-player="repeticao" data-modo="biblioteca" aria-label="Repetir biblioteca" title="Repetição">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m17 1 4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3" /><text x="9" y="15">1</text></svg>
+                </button>
+              </div>
+
+              <div class="volume-estacao">
+                <button id="botao-mute-musica" type="button" aria-pressed="false" aria-label="Silenciar música">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" /><path class="corte-volume" d="m5 5 14 14" /></svg>
+                </button>
+                <label class="rotulo-oculto" for="controle-volume-musica">Volume da música</label>
+                <input id="controle-volume-musica" type="range" min="0" max="100" value="62" />
+                <span id="valor-volume-musica">62%</span>
+              </div>
+            </div>
+
+            <aside class="fila-estacao" aria-labelledby="titulo-fila-estacao">
+              <header>
+                <div><p class="rotulo-cartao">Sequência</p><h3 id="titulo-fila-estacao">A seguir</h3></div>
+                <span id="quantidade-fila-estacao">0 faixas</span>
+              </header>
+              <ol id="lista-fila-estacao" class="lista-fila-estacao"></ol>
+              <p class="fila-vazia-estacao" id="fila-vazia-estacao">A fila acompanha a ordem da biblioteca.</p>
+            </aside>
+
+            <div class="resumo-horta-imersivo" aria-label="Estado atual da horta">
+              <span><small>Umidade</small><strong id="umidade-imersiva">--%</strong></span>
+              <span><small>Bomba</small><strong id="bomba-imersiva">--</strong></span>
+              <span><small>Iluminação</small><strong id="luz-imersiva">--</strong></span>
+              <span><small>Sistema</small><strong id="arduino-imersivo">--</strong></span>
+            </div>
+          </section>
+
+          <section class="biblioteca-estacao" aria-labelledby="titulo-biblioteca-estacao">
+            <header class="cabecalho-biblioteca-estacao">
+              <div>
+                <p class="rotulo-cartao">Acervo offline</p>
+                <h3 id="titulo-biblioteca-estacao">Biblioteca</h3>
+                <p id="resumo-biblioteca-estacao">0 músicas encontradas</p>
+              </div>
+              <label class="busca-estacao" for="busca-biblioteca-estacao">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m16 16 5 5" /></svg>
+                <input id="busca-biblioteca-estacao" type="search" placeholder="Buscar música, artista ou álbum..." autocomplete="off" />
+              </label>
+            </header>
+            <div class="abas-biblioteca" role="tablist" aria-label="Filtros da biblioteca">
+              <button type="button" role="tab" data-filtro-biblioteca="todas" aria-selected="true">Todas</button>
+              <button type="button" role="tab" data-filtro-biblioteca="artistas" aria-selected="false">Artistas</button>
+              <button type="button" role="tab" data-filtro-biblioteca="albuns" aria-selected="false">Álbuns</button>
+              <button type="button" role="tab" data-filtro-biblioteca="favoritas" aria-selected="false">Favoritas</button>
+              <button type="button" role="tab" data-filtro-biblioteca="recentes" aria-selected="false">Recentes</button>
+            </div>
+            <div class="lista-biblioteca" id="lista-biblioteca" role="list"></div>
+            <div class="sem-resultados-biblioteca" id="sem-resultados-biblioteca" hidden>
+              <span aria-hidden="true">⌁</span>
+              <p>Nenhuma faixa combina com esta busca.</p>
+            </div>
+          </section>
+        </div>
+
+        <audio id="audio-estacao" preload="metadata"></audio>
+      </section>
     </main>
+
+    <aside class="mini-player" id="mini-player" hidden aria-label="Reprodutor de música compacto">
+      <button class="mini-player-identificacao" type="button" data-abrir-estacao aria-label="Abrir Estação">
+        <span class="mini-player-capa" id="mini-player-capa" aria-hidden="true"><img id="mini-player-imagem" alt="" hidden /><i>HI</i></span>
+        <span><strong id="mini-player-titulo" aria-live="polite">Nenhuma música</strong><small id="mini-player-artista">Estação</small></span>
+      </button>
+      <div class="mini-player-acoes">
+        <button type="button" data-acao-player="anterior" aria-label="Música anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5v14M18 6l-8 6 8 6Z" /></svg></button>
+        <button class="mini-player-reproduzir" type="button" data-acao-player="alternar" aria-label="Reproduzir"><svg class="icone-reproduzir" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 9 6-9 6Z" /></svg><svg class="icone-pausar-musica" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v12M15 6v12" /></svg></button>
+        <button type="button" data-acao-player="proxima" aria-label="Próxima música"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 5v14M6 6l8 6-8 6Z" /></svg></button>
+        <button type="button" data-ocultar-mini-player aria-label="Ocultar mini-player" title="Ocultar mini-player"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
+      </div>
+      <span class="mini-player-progresso" aria-hidden="true"><i id="mini-player-barra"></i></span>
+    </aside>
+
+    <dialog class="painel-detalhes" id="painel-detalhes" aria-labelledby="titulo-painel-detalhes">
+      <div class="conteudo-painel-detalhes">
+        <header class="cabecalho-painel-detalhes">
+          <div>
+            <p class="rotulo-cartao" id="rotulo-painel-detalhes">Leitura aprofundada</p>
+            <h2 id="titulo-painel-detalhes">Detalhes do sensor</h2>
+          </div>
+          <button
+            class="botao-fechar-detalhes"
+            id="botao-fechar-detalhes"
+            type="button"
+            aria-label="Fechar detalhes"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m6 6 12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </header>
+
+        <div class="corpo-painel-detalhes">
+          <section class="destaque-painel-detalhes">
+            <div class="sinal-painel-detalhes" aria-hidden="true"><i></i><i></i><i></i></div>
+            <span class="estado-painel-detalhes" id="estado-painel-detalhes">Monitorando</span>
+            <p class="valor-painel-detalhes">
+              <strong id="valor-painel-detalhes">--</strong>
+              <small id="unidade-painel-detalhes"></small>
+            </p>
+            <p id="descricao-painel-detalhes">Aguardando informações do cultivo.</p>
+          </section>
+
+          <dl class="metricas-painel-detalhes">
+            <div>
+              <dt id="rotulo-metrica-um">Métrica</dt>
+              <dd id="valor-metrica-um">--</dd>
+            </div>
+            <div>
+              <dt id="rotulo-metrica-dois">Métrica</dt>
+              <dd id="valor-metrica-dois">--</dd>
+            </div>
+            <div>
+              <dt id="rotulo-metrica-tres">Métrica</dt>
+              <dd id="valor-metrica-tres">--</dd>
+            </div>
+          </dl>
+
+          <section class="leitura-recente-detalhes" aria-labelledby="titulo-leitura-recente">
+            <header>
+              <div>
+                <p class="rotulo-cartao">Sinal recente</p>
+                <h3 id="titulo-leitura-recente">Comportamento das leituras</h3>
+              </div>
+              <span id="resumo-leitura-detalhes">Recebendo dados</span>
+            </header>
+            <div class="visual-leitura-detalhes" id="visual-leitura-detalhes" aria-hidden="true"></div>
+          </section>
+        </div>
+      </div>
+    </dialog>
 
     <footer class="rodape-aplicacao limite-conteudo">
       <p><span aria-hidden="true"></span> Horta Inteligente <strong>•</strong> monitoramento local</p>
@@ -627,7 +1122,207 @@
     </footer>
     </div>
 
+    <section class="modo-ambiente" id="modo-ambiente" hidden inert aria-label="Modo ambiente da Horta Inteligente">
+      <div class="atmosfera-modo-ambiente" aria-hidden="true"><i></i><i></i><i></i></div>
+      <header>
+        <span class="assinatura-modo-ambiente"><i></i><strong data-dado-ambiente="nome-sistema" data-nome-sistema>HORTA INTELIGENTE</strong></span>
+        <span>SISTEMA EM PRESENÇA PASSIVA</span>
+      </header>
+      <div class="centro-modo-ambiente">
+        <p data-dado-ambiente="data">--</p>
+        <time data-dado-ambiente="hora">--:--</time>
+        <div class="planta-modo-ambiente" aria-hidden="true">
+          <svg viewBox="0 0 128 128"><path d="M64 110V59M64 82C39 82 25 65 25 37c25 0 39 17 39 45ZM64 59c0-25 16-40 42-40 0 27-16 40-42 40Z" /></svg>
+          <span></span>
+        </div>
+        <p class="leitura-modo-ambiente"><small>UMIDADE DO SOLO</small><strong data-dado-ambiente="umidade">--%</strong></p>
+        <div class="estados-modo-ambiente">
+          <span>BOMBA <strong data-dado-ambiente="bomba">--</strong></span>
+          <span>LUZ <strong data-dado-ambiente="iluminacao">--</strong></span>
+          <span>ARDUINO <strong data-dado-ambiente="arduino">--</strong></span>
+        </div>
+      </div>
+      <footer>
+        <div><span>♪</span><p><strong data-dado-ambiente="musica">Estação em repouso</strong><small data-dado-ambiente="artista">Nenhuma música tocando</small></p></div>
+        <p>Mova o mouse ou pressione uma tecla para retornar</p>
+      </footer>
+    </section>
+
+    <dialog class="central-configuracoes" id="central-configuracoes" aria-labelledby="titulo-central-configuracoes">
+      <div class="estrutura-configuracoes">
+        <header class="cabecalho-configuracoes">
+          <div class="marca-configuracoes">
+            <span aria-hidden="true"><svg viewBox="0 0 64 64"><path d="M32 51V30M32 38C21 38 15 31 15 20c11 0 17 7 17 18ZM32 30c0-11 7-17 18-17 0 11-7 17-18 17Z" /></svg></span>
+            <div><small>CENTRAL DO SISTEMA</small><h2 id="titulo-central-configuracoes">Configurações</h2></div>
+          </div>
+          <label class="busca-configuracoes" for="busca-configuracoes">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m16 16 5 5" /></svg>
+            <input id="busca-configuracoes" type="search" placeholder="Buscar configurações..." autocomplete="off" />
+            <kbd>Ctrl K</kbd>
+          </label>
+          <button class="botao-fechar-configuracoes" type="button" data-fechar-configuracoes aria-label="Fechar configurações">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+          </button>
+        </header>
+
+        <div class="corpo-configuracoes">
+          <nav class="categorias-configuracoes" aria-label="Categorias de configurações">
+            <button type="button" data-categoria-configuracao="experiencia" aria-current="page"><span>01</span> Experiência</button>
+            <button type="button" data-categoria-configuracao="aparencia"><span>02</span> Aparência</button>
+            <button type="button" data-categoria-configuracao="audio"><span>03</span> Áudio</button>
+            <button type="button" data-categoria-configuracao="estacao"><span>04</span> Estação</button>
+            <button type="button" data-categoria-configuracao="interface"><span>05</span> Interface</button>
+            <button type="button" data-categoria-configuracao="horta"><span>06</span> Horta</button>
+            <button type="button" data-categoria-configuracao="acessibilidade"><span>07</span> Acessibilidade</button>
+            <button type="button" data-categoria-configuracao="sistema"><span>08</span> Sistema</button>
+          </nav>
+
+          <div class="paineis-configuracoes" id="paineis-configuracoes">
+            <section class="painel-configuracao" data-painel-configuracao="experiencia">
+              <header><p>01 / EXPERIÊNCIA</p><h3>Como o sistema deve estar presente?</h3><span>Perfis coordenam visual, movimento e prioridade sem alterar os dados.</span></header>
+              <div class="grade-perfis-sistema item-configuracao" data-termos="perfil padrão apresentação noturno foco música">
+                <button type="button" data-perfil-sistema="padrao" aria-pressed="true"><i class="previa-perfil--padrao"></i><strong>Padrão</strong><small>Equilíbrio completo</small></button>
+                <button type="button" data-perfil-sistema="apresentacao"><i class="previa-perfil--apresentacao"></i><strong>Apresentação</strong><small>Leitura à distância</small></button>
+                <button type="button" data-perfil-sistema="noturno"><i class="previa-perfil--noturno"></i><strong>Noturno</strong><small>Presença discreta</small></button>
+                <button type="button" data-perfil-sistema="foco"><i class="previa-perfil--foco"></i><strong>Foco</strong><small>Somente o essencial</small></button>
+                <button type="button" data-perfil-sistema="musica"><i class="previa-perfil--musica"></i><strong>Música</strong><small>Estação em destaque</small></button>
+              </div>
+              <article class="grupo-configuracoes">
+                <div class="titulo-grupo-configuracoes"><div><small>IDENTIDADE</small><h4>Nome do ecossistema</h4></div><span>Aplicado em tempo real</span></div>
+                <label class="item-configuracao item-configuracao--campo" data-termos="nome sistema horta identidade"><span><strong>Nome do sistema</strong><small>Aparece discretamente nas áreas de presença.</small></span><input type="text" maxlength="32" value="HORTA INTELIGENTE" data-configuracao="geral.nomeSistema" /></label>
+              </article>
+            </section>
+
+            <section class="painel-configuracao" data-painel-configuracao="aparencia" hidden>
+              <header><p>02 / APARÊNCIA</p><h3>A mesma identidade, em outra atmosfera.</h3><span>Tema, acento e contraste respondem imediatamente.</span></header>
+              <article class="grupo-configuracoes">
+                <label class="item-configuracao" data-termos="tema sistema cultivo escuro claro"><span><strong>Tema</strong><small>Define a estrutura visual; a cor principal permanece independente.</small></span><select data-configuracao="aparencia.modoCor"><option value="sistema">Sistema</option><option value="cultivo">Cultivo</option><option value="escuro">Escuro</option><option value="claro">Claro</option></select></label>
+                <label class="item-configuracao" data-termos="cor principal destaque verde azul violeta âmbar ciano rosa"><span><strong>Cor principal</strong><small>Personaliza interações sem alterar as cores de estado.</small></span><select data-configuracao="aparencia.corDestaque"><option value="cultivo">Verde Cultivo</option><option value="ciano">Ciano Circuito</option><option value="azul">Azul Precisão</option><option value="roxo">Violeta Tecnologia</option><option value="ambar">Âmbar Solar</option><option value="rosa">Rosa Botânico</option><option value="personalizada">Personalizada</option></select></label>
+                <label class="item-configuracao item-configuracao--cor" data-termos="cor principal personalizada preview"><span><strong>Cor personalizada</strong><small>O sistema deriva contraste, hover, glow e superfícies automaticamente.</small></span><span class="controle-cor-personalizada"><i id="amostra-cor-personalizada" aria-hidden="true"></i><input type="color" value="#65d99a" data-configuracao="aparencia.corPersonalizada" aria-label="Escolher cor principal personalizada" /></span></label>
+                <label class="item-configuracao" data-termos="intensidade visual sutil vibrante brilho"><span><strong>Intensidade visual</strong><small>Glow, blur e elementos decorativos.</small></span><select data-configuracao="aparencia.intensidadeVisual"><option value="sutil">Sutil</option><option value="normal">Normal</option><option value="vibrante">Vibrante</option></select></label>
+              </article>
+              <article class="grupo-configuracoes">
+                <div class="titulo-grupo-configuracoes"><div><small>CICLO</small><h4>Dia e noite</h4></div></div>
+                <label class="item-configuracao" data-termos="tema automático horário dia noite"><span><strong>Conforto noturno automático</strong><small>Escurece a atmosfera no horário definido, sem trocar sua cor principal.</small></span><input class="interruptor" type="checkbox" data-configuracao="aparencia.temaAutomatico.ativo" /></label>
+                <div class="linha-campos-configuracao item-configuracao" data-termos="início fim modo noturno"><label><span>Início noturno</span><input type="time" value="20:00" data-configuracao="aparencia.temaAutomatico.inicio" /></label><label><span>Fim noturno</span><input type="time" value="07:00" data-configuracao="aparencia.temaAutomatico.fim" /></label></div>
+              </article>
+            </section>
+
+            <section class="painel-configuracao" data-painel-configuracao="audio" hidden>
+              <header><p>03 / ÁUDIO</p><h3>Uma paisagem sonora sob controle.</h3><span>Efeitos, ambiente e música têm volumes independentes.</span></header>
+              <div class="perfis-audio item-configuracao" data-termos="perfil silencioso discreto imersivo"><button type="button" data-perfil-audio="silencioso">Silencioso</button><button type="button" data-perfil-audio="discreto">Discreto</button><button type="button" data-perfil-audio="imersivo">Imersivo</button><button type="button" data-perfil-audio="personalizado">Personalizado</button></div>
+              <article class="grupo-configuracoes">
+                <label class="item-configuracao item-configuracao--mestre" data-termos="som geral mute"><span><strong>Som geral</strong><small>Atalho mestre; preserva as escolhas individuais.</small></span><input class="interruptor" type="checkbox" checked data-configuracao="audio.somGeralAtivo" /></label>
+                <label class="item-configuracao" data-termos="efeitos sonoros sfx"><span><strong>Efeitos sonoros</strong><small>Respostas de interface e automação.</small></span><input class="interruptor" type="checkbox" checked data-configuracao="audio.efeitos.ativo" /></label>
+                <label class="item-configuracao item-configuracao--volume" data-termos="volume efeitos"><span><strong>Volume dos efeitos</strong><small>Feedback de interface.</small></span><div><input type="range" min="0" max="100" value="72" data-tipo-configuracao="percentual" data-configuracao="audio.efeitos.volume" /><output>72%</output></div></label>
+                <label class="item-configuracao" data-termos="som ambiente respiração"><span><strong>Som ambiente</strong><small>Atmosfera tecnológica da abertura.</small></span><input class="interruptor" type="checkbox" checked data-configuracao="audio.ambiente.ativo" /></label>
+                <label class="item-configuracao item-configuracao--volume" data-termos="volume ambiente"><span><strong>Volume ambiente</strong><small>Pulso suave do sistema.</small></span><div><input type="range" min="0" max="100" value="18" data-tipo-configuracao="percentual" data-configuracao="audio.ambiente.volume" /><output>18%</output></div></label>
+                <label class="item-configuracao" data-termos="música estação"><span><strong>Música</strong><small>Biblioteca local da Estação.</small></span><input class="interruptor" type="checkbox" checked data-configuracao="audio.musica.ativo" /></label>
+                <label class="item-configuracao item-configuracao--volume" data-termos="volume música"><span><strong>Volume da música</strong><small>Sincronizado com o player.</small></span><div><input type="range" min="0" max="100" value="62" data-tipo-configuracao="percentual" data-configuracao="audio.musica.volume" /><output>62%</output></div></label>
+                <button class="botao-acao-configuracao item-configuracao" type="button" data-acao-configuracao="testar-sfx" data-termos="testar som sfx">Testar efeito sonoro <span>↗</span></button>
+              </article>
+            </section>
+
+            <section class="painel-configuracao" data-painel-configuracao="estacao" hidden>
+              <header><p>04 / ESTAÇÃO</p><h3>Sua biblioteca mora no computador.</h3><span>A Estação só lê os originais e mantém um índice local.</span></header>
+              <article class="cartao-pasta-configuracoes item-configuracao" data-termos="biblioteca pasta música alterar reescanear">
+                <span class="icone-pasta-configuracoes" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3zM3 7V5h7l2 2" /></svg></span>
+                <div><small>PASTA ATUAL</small><strong id="caminho-biblioteca">Nenhuma pasta selecionada</strong><p><span id="quantidade-musicas-configuracao">0 músicas</span><i></i><span id="data-biblioteca">Ainda não indexada</span></p></div>
+                <div><button type="button" id="botao-alterar-pasta">Alterar pasta</button><button type="button" id="botao-reescanear-biblioteca">Reescanear</button></div>
+              </article>
+              <article class="grupo-configuracoes">
+                <label class="item-configuracao" data-termos="aleatório shuffle"><span><strong>Reprodução aleatória</strong><small>Embaralha a próxima sequência.</small></span><input class="interruptor" type="checkbox" data-configuracao="estacao.aleatorio" /></label>
+                <label class="item-configuracao" data-termos="repetição música biblioteca"><span><strong>Repetição padrão</strong><small>Comportamento ao final.</small></span><select data-configuracao="estacao.repeticao"><option value="desativada">Desativada</option><option value="biblioteca">Biblioteca</option><option value="faixa">Uma música</option></select></label>
+                <label class="item-configuracao" data-termos="retomar sessão"><span><strong>Retomar sessão anterior</strong><small>Restaura música, fila e modos sem autoplay.</small></span><input class="interruptor" type="checkbox" checked data-configuracao="estacao.retomarSessao" /></label>
+                <label class="item-configuracao" data-termos="retomar posição"><span><strong>Retomar posição anterior</strong><small>Continua do ponto salvo ao pressionar play.</small></span><input class="interruptor" type="checkbox" checked data-configuracao="estacao.retomarPosicao" /></label>
+                <label class="item-configuracao" data-termos="mini player"><span><strong>Mostrar mini-player</strong><small>Controles disponíveis fora da Estação.</small></span><input class="interruptor" type="checkbox" checked data-configuracao="estacao.mostrarMiniPlayer" /></label>
+                <label class="item-configuracao" data-termos="visualizador áudio"><span><strong>Mostrar visualizador</strong><small>Reage ao áudio quando visível.</small></span><input class="interruptor" type="checkbox" checked data-configuracao="estacao.mostrarVisualizador" /></label>
+              </article>
+            </section>
+
+            <section class="painel-configuracao" data-painel-configuracao="interface" hidden>
+              <header><p>05 / INTERFACE</p><h3>Movimento com propósito.</h3><span>Ajuste a presença visual sem remover informação.</span></header>
+              <article class="grupo-configuracoes">
+                <label class="item-configuracao" data-termos="animações movimento"><span><strong>Animações</strong><small>Transições de áreas e estados.</small></span><input class="interruptor" type="checkbox" checked data-configuracao="interface.animacoesAtivas" /></label>
+                <label class="item-configuracao" data-termos="intensidade animações"><span><strong>Intensidade das animações</strong><small>Amplitude do movimento.</small></span><select data-configuracao="interface.intensidadeAnimacoes"><option value="reduzida">Reduzida</option><option value="normal">Normal</option><option value="alta">Alta</option></select></label>
+                <label class="item-configuracao" data-termos="efeitos fundo"><span><strong>Efeitos de fundo</strong><small>Grades, halos e camadas ambientais.</small></span><input class="interruptor" type="checkbox" checked data-configuracao="interface.efeitosFundoAtivos" /></label>
+                <label class="item-configuracao" data-termos="microinterações"><span><strong>Microinterações</strong><small>Respostas sutis a ações.</small></span><input class="interruptor" type="checkbox" checked data-configuracao="interface.microinteracoesAtivas" /></label>
+                <label class="item-configuracao" data-termos="visualizador música áudio"><span><strong>Visualizador de música</strong><small>Permite reações de frequência na Estação.</small></span><input class="interruptor" type="checkbox" checked data-configuracao="interface.visualizadorMusicaAtivo" /></label>
+                <label class="item-configuracao" data-termos="nova leitura sensor"><span><strong>Indicador de nova leitura</strong><small>Sinaliza cada pacote recebido.</small></span><input class="interruptor" type="checkbox" checked data-configuracao="interface.indicadorNovaLeituraAtivo" /></label>
+                <label class="item-configuracao" data-termos="modo ambiente screensaver"><span><strong>Modo ambiente após</strong><small>Tela passiva com cultivo e música.</small></span><select data-tipo-configuracao="numero" data-configuracao="interface.modoAmbienteMinutos"><option value="0">Nunca</option><option value="2">2 minutos</option><option value="5">5 minutos</option><option value="10">10 minutos</option><option value="20">20 minutos</option></select></label>
+              </article>
+              <div class="acoes-modos-configuracoes item-configuracao" data-termos="modo foco apresentação"><button type="button" data-acao-configuracao="alternar-foco"><span>FOCO</span><strong>Somente dados essenciais</strong></button><button type="button" data-acao-configuracao="alternar-apresentacao"><span>APRESENTAÇÃO</span><strong>Leitura à distância</strong></button></div>
+            </section>
+
+            <section class="painel-configuracao" data-painel-configuracao="horta" hidden>
+              <header><p>06 / HORTA</p><h3>Preparada para a automação real.</h3><span>Valores organizados para a futura camada Serial.</span></header>
+              <div class="aviso-integracao-horta"><span>FUTURA INTEGRAÇÃO SERIAL</span><p>Nenhum controle abaixo envia comandos ao circuito nesta etapa.</p></div>
+              <article class="grupo-configuracoes">
+                <label class="item-configuracao item-configuracao--campo" data-termos="nome planta cultivo"><span><strong>Nome da planta</strong><small>Identificação do cultivo.</small></span><input type="text" maxlength="40" value="Cultivo principal" data-configuracao="horta.nomePlanta" /></label>
+                <div class="linha-campos-configuracao item-configuracao" data-termos="umidade limite mínimo máximo"><label><span>Umidade mínima (%)</span><input type="number" min="0" max="100" value="45" data-tipo-configuracao="numero" data-configuracao="horta.limiteUmidadeMinima" /></label><label><span>Umidade máxima (%)</span><input type="number" min="0" max="100" value="72" data-tipo-configuracao="numero" data-configuracao="horta.limiteUmidadeMaxima" /></label></div>
+                <div class="linha-campos-configuracao item-configuracao" data-termos="grow light iluminação horário ciclo"><label><span>Grow Light — início</span><input type="time" value="08:00" data-configuracao="horta.horarioIluminacaoInicio" /></label><label><span>Grow Light — fim</span><input type="time" value="20:00" data-configuracao="horta.horarioIluminacaoFim" /></label></div>
+                <label class="item-configuracao" data-termos="modo automático manual"><span><strong>Modo automático planejado</strong><small>Preferência para a futura Serial; ainda não envia comandos.</small></span><input class="interruptor" type="checkbox" checked data-configuracao="horta.modoAutomatico" /></label>
+              </article>
+            </section>
+
+            <section class="painel-configuracao" data-painel-configuracao="acessibilidade" hidden>
+              <header><p>07 / ACESSIBILIDADE</p><h3>Conforto também é parte do sistema.</h3><span>Preferências do sistema operacional continuam respeitadas.</span></header>
+              <article class="grupo-configuracoes">
+                <label class="item-configuracao" data-termos="reduzir movimentos"><span><strong>Reduzir movimentos</strong><small>Minimiza transições contínuas.</small></span><input class="interruptor" type="checkbox" data-configuracao="acessibilidade.reduzirMovimentos" /></label>
+                <label class="item-configuracao" data-termos="alto contraste"><span><strong>Alto contraste</strong><small>Reforça textos e indicadores.</small></span><input class="interruptor" type="checkbox" data-configuracao="acessibilidade.altoContraste" /></label>
+                <label class="item-configuracao" data-termos="aumentar textos fonte"><span><strong>Aumentar textos</strong><small>Amplia a tipografia sem zoom.</small></span><input class="interruptor" type="checkbox" data-configuracao="acessibilidade.aumentarTextos" /></label>
+                <label class="item-configuracao" data-termos="transparência blur"><span><strong>Desativar efeitos translúcidos</strong><small>Usa superfícies sólidas.</small></span><input class="interruptor" type="checkbox" data-configuracao="acessibilidade.desativarTransparencias" /></label>
+                <label class="item-configuracao" data-termos="visualizador música"><span><strong>Desativar visualizador</strong><small>Remove reações visuais ao áudio.</small></span><input class="interruptor" type="checkbox" data-configuracao="acessibilidade.semVisualizador" /></label>
+                <label class="item-configuracao item-configuracao--perigo" data-termos="silenciar todos sons"><span><strong>Silenciar todos os sons</strong><small>Prioridade sobre música e efeitos.</small></span><input class="interruptor" type="checkbox" data-configuracao="acessibilidade.silenciarTudo" /></label>
+              </article>
+            </section>
+
+            <section class="painel-configuracao" data-painel-configuracao="sistema" hidden>
+              <header><p>08 / SISTEMA</p><h3>Diagnóstico local em uma visão.</h3><span>Informações úteis para montagem e futura comunicação Serial.</span></header>
+              <div class="grade-informacoes-sistema">
+                <article class="item-configuracao" data-termos="versão software"><small>VERSÃO DO SOFTWARE</small><strong data-informacao-sistema="versao">--</strong></article>
+                <article class="item-configuracao" data-termos="fonte simulador arduino"><small>FONTE DE DADOS</small><strong data-informacao-sistema="fonte">Simulação</strong></article>
+                <article class="item-configuracao" data-termos="arduino estado"><small>ESTADO DO ARDUINO</small><strong data-informacao-sistema="arduino">Aguardando</strong></article>
+                <article class="item-configuracao" data-termos="biblioteca músicas"><small>BIBLIOTECA MUSICAL</small><strong data-informacao-sistema="biblioteca">0 faixas</strong></article>
+                <article class="item-configuracao" data-termos="última leitura"><small>ÚLTIMA LEITURA</small><strong data-informacao-sistema="ultima-leitura">--</strong></article>
+                <article class="item-configuracao" data-termos="tempo execução"><small>TEMPO DE EXECUÇÃO</small><strong data-informacao-sistema="tempo-execucao">00:00:00</strong></article>
+              </div>
+              <button class="botao-acao-configuracao item-configuracao" type="button" data-acao-sistema="abrir-pasta-dados" data-termos="abrir pasta dados">Abrir pasta de dados do aplicativo <span>↗</span></button>
+              <div class="resumo-sessao-configuracoes"><p><small>SESSÃO CASEMOD</small><strong>Presença local e offline</strong></p><span><b data-informacao-sistema="leituras-sessao">0</b> leituras</span><span><b data-informacao-sistema="faixas-sessao">0</b> faixas ouvidas</span></div>
+            </section>
+
+            <div class="nenhuma-configuracao" id="nenhuma-configuracao" hidden><span>⌁</span><h3>Nenhuma configuração encontrada.</h3><p>Tente tema, som, música, horta ou animação.</p></div>
+          </div>
+        </div>
+
+        <footer class="rodape-configuracoes"><span><i></i> Preferências salvas automaticamente neste computador</span><div><button class="botao-redefinir-ajustes" type="button" data-redefinir-ajustes>Redefinir ajustes</button><button type="button" data-fechar-configuracoes>Concluir</button></div></footer>
+      </div>
+    </dialog>
+
+    <dialog class="confirmacao-sistema" id="confirmacao-redefinir-ajustes" aria-labelledby="titulo-confirmacao-redefinir">
+      <div class="icone-confirmacao" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 8.2 5.3M12 7v5l3 2" /><path d="M17 3h4v4" /></svg>
+      </div>
+      <p>RESTAURAR IDENTIDADE OFICIAL</p>
+      <h2 id="titulo-confirmacao-redefinir">Redefinir todas as preferências?</h2>
+      <span>Temas, cor principal, movimento e áudio voltarão ao padrão. Suas músicas, favoritos, histórico e parâmetros do circuito serão preservados.</span>
+      <div><button type="button" data-cancelar-redefinicao>Cancelar</button><button type="button" data-confirmar-redefinicao>Redefinir</button></div>
+    </dialog>
+
+    <dialog class="paleta-comandos" id="paleta-comandos" aria-labelledby="titulo-paleta-comandos">
+      <h2 class="rotulo-oculto" id="titulo-paleta-comandos">Paleta de comandos</h2>
+      <header><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m16 16 5 5" /></svg><label for="busca-comandos" class="rotulo-oculto">Buscar ação</label><input id="busca-comandos" type="search" placeholder="Buscar uma ação..." autocomplete="off" /><kbd>ESC</kbd></header>
+      <div><small>AÇÕES RÁPIDAS</small><ul id="lista-comandos"></ul></div>
+      <footer><span><kbd>↑</kbd><kbd>↓</kbd> navegar</span><span><kbd>Enter</kbd> executar</span><span>HORTA / COMMAND</span></footer>
+    </dialog>
+
+    <div class="regiao-notificacoes" id="regiao-notificacoes" popover="manual" aria-live="polite" aria-atomic="true"></div>
+
+    <script src="configuracoes.js"></script>
     <script src="simulador.js"></script>
+    <script src="sons.js"></script>
+    <script src="interface-sistema.js"></script>
+    <script src="estacao.js"></script>
     <script src="inicializacao.js"></script>
     <script src="principal.js"></script>
   </body>

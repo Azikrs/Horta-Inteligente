@@ -6,6 +6,16 @@ module.exports = {
   packagerConfig: {
     asar: true,
     icon: caminho.join(__dirname, 'recursos', 'icone-horta'),
+    // Mantém builds, metadados do Git e músicas pessoais fora do ASAR. As
+    // dependências de produção continuam sendo coletadas normalmente pelo Forge.
+    ignore: [
+      /^[/\\]out(?:[/\\]|$)/,
+      /^[/\\]\.git(?:[/\\]|$)/,
+      // A biblioteca musical é externa e nunca acompanha o executável.
+      /^[/\\]musicas(?:[/\\]|$)/i,
+      /^[/\\]ferramentas(?:[/\\]|$)/,
+      /^[/\\](?:README\.md|verificar-projeto\.js|\.gitignore|\.gitattributes)$/,
+    ],
   },
   rebuildConfig: {},
   makers: [
