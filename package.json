@@ -6,7 +6,7 @@
   "main": "aplicativo.js",
   "scripts": {
     "start": "electron-forge start",
-    "test": "node verificar-projeto.js",
+    "test": "node verificar-projeto.js && node --test testes/*.test.js",
     "package": "electron-forge package",
     "make": "electron-forge make"
   },
@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.1",
-    "music-metadata": "^11.15.0"
+    "music-metadata": "^11.15.0",
+    "serialport": "^13.0.0"
   }
 }

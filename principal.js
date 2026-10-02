@@ -269,11 +269,11 @@ function normalizarDadosHorta(dadosRecebidos) {
     horarioRtc: normalizarHorarioTexto(dados.horarioRtc, null, true),
     horarioIluminacaoInicio: normalizarHorarioTexto(
       dados.horarioIluminacaoInicio,
-      obterConfiguracao("horta.horarioIluminacaoInicio", "08:00"),
+      null,
     ),
     horarioIluminacaoFim: normalizarHorarioTexto(
       dados.horarioIluminacaoFim,
-      obterConfiguracao("horta.horarioIluminacaoFim", "20:00"),
+      null,
     ),
     estadoArduino: normalizarEstadoArduino(dados.estadoArduino),
     ultimaAtualizacao: normalizarData(dados.ultimaAtualizacao),
@@ -289,10 +289,8 @@ function normalizarDadosHorta(dadosRecebidos) {
  * importante porque limitar automaticamente um valor inválido (por exemplo,
  * transformar 180% em 100%) não pode ser confundido com uma leitura real.
  *
- * A futura leitura Serial deverá transformar uma mensagem completa como
- * `UMIDADE:63;BRUTO:412;BOMBA:OFF;GROW_LIGHT:ON;RTC:16:46:20;CICLO_INICIO:08:00;CICLO_FIM:20:00`
- * neste mesmo objeto antes de chegar aqui. Porta, sequência, intervalo e nome
- * da fonte são metadados acrescentados pelo módulo Serial no computador.
+ * Umidade, valor bruto, bomba e sequência são obrigatórios. RTC e iluminação
+ * podem estar ausentes no firmware; quando presentes, também são validados.
  */
 function leituraDaHortaValida(dadosRecebidos) {
   if (!dadosRecebidos || typeof dadosRecebidos !== "object" || Array.isArray(dadosRecebidos)) {
@@ -324,14 +322,14 @@ function leituraDaHortaValida(dadosRecebidos) {
     && valorBrutoSensor <= 1023
     && Number.isInteger(valorBrutoSensor)
     && bombaLigada !== null
-    && iluminacaoLigada !== null
-    && horarioRtc !== null
-    && horarioIluminacaoInicio !== null
-    && horarioIluminacaoFim !== null
+    && (dadosRecebidos.iluminacaoLigada == null || iluminacaoLigada !== null)
+    && (dadosRecebidos.horarioRtc == null || horarioRtc !== null)
+    && (dadosRecebidos.horarioIluminacaoInicio == null || horarioIluminacaoInicio !== null)
+    && (dadosRecebidos.horarioIluminacaoFim == null || horarioIluminacaoFim !== null)
     && portaInformada
     && numeroLeitura !== null
-    && Number.isInteger(numeroLeitura)
-    && numeroLeitura >= 0
+    && Number.isSafeInteger(numeroLeitura)
+    && (numeroLeitura >= 0 || dadosRecebidos.fonteDados === "arduino-serial")
     && intervaloAtualizacao !== null
     && intervaloAtualizacao > 0
     && fonteInformada;
@@ -772,57 +770,28 @@ function atualizarAtuadores(dadosHorta) {
       : `Programada para ligar às ${dadosHorta.horarioIluminacaoInicio}`;
 }
 
-function converterHorarioEmSegundos(horario) {
-  const partes = String(horario ?? "").split(":").map(Number);
-  if (partes.length < 2 || partes.some((parte) => !Number.isFinite(parte))) return null;
-  return (partes[0] * 3600) + (partes[1] * 60) + (partes[2] ?? 0);
-}
-
 function calcularCicloIluminacao(dadosHorta) {
-  const inicio = converterHorarioEmSegundos(dadosHorta.horarioIluminacaoInicio);
-  const fim = converterHorarioEmSegundos(dadosHorta.horarioIluminacaoFim);
-  const agora = converterHorarioEmSegundos(dadosHorta.horarioRtc);
-  if (inicio === null || fim === null || agora === null || inicio === fim) {
-    return { valido: false, ativo: false, progresso: 0 };
-  }
-
-  const atravessaMeiaNoite = inicio > fim;
-  const duracao = atravessaMeiaNoite ? (86400 - inicio) + fim : fim - inicio;
-  const ativo = atravessaMeiaNoite
-    ? agora >= inicio || agora < fim
-    : agora >= inicio && agora < fim;
-  let decorrido;
-  if (ativo) {
-    decorrido = agora >= inicio ? agora - inicio : (86400 - inicio) + agora;
-  } else if (!atravessaMeiaNoite && agora >= fim) {
-    decorrido = duracao;
-  } else {
-    decorrido = 0;
-  }
-
-  return {
-    valido: true,
-    ativo,
-    progresso: limitarValor((decorrido / duracao) * 100, 0, 100),
-  };
+  return escopoAplicacao.HortaInteligente.calcularCicloIluminacao(dadosHorta, {
+    horarioIluminacaoInicio: obterConfiguracao("horta.horarioIluminacaoInicio", "08:00"),
+    horarioIluminacaoFim: obterConfiguracao("horta.horarioIluminacaoFim", "20:00"),
+  });
 }
 
 function atualizarCicloIluminacao(dadosHorta) {
   const ciclo = calcularCicloIluminacao(dadosHorta);
-  const inicio = dadosHorta.horarioIluminacaoInicio ?? "--:--";
-  const fim = dadosHorta.horarioIluminacaoFim ?? "--:--";
-  const rtc = dadosHorta.horarioRtc ?? "--:--:--";
+  const { inicio, fim, horario } = ciclo;
+  const referencia = ciclo.usaRelogioLocal ? "Computador" : "RTC";
 
   atualizarTextoSeMudou(elementos.horarioInicioIluminacao, inicio);
   atualizarTextoSeMudou(elementos.horarioFimIluminacao, fim);
   atualizarTextoSeMudou(elementos.legendaInicioIluminacao, inicio);
   atualizarTextoSeMudou(elementos.legendaFimIluminacao, fim);
-  atualizarTextoSeMudou(elementos.horarioRtcIluminacao, `RTC ${rtc}`);
+  atualizarTextoSeMudou(elementos.horarioRtcIluminacao, `${referencia} ${horario}`);
   elementos.preenchimentoCicloIluminacao.style.width = `${ciclo.progresso}%`;
   elementos.cartaoCicloIluminacao.dataset.cicloAtivo = String(ciclo.ativo);
 
   if (!ciclo.valido) {
-    elementos.estadoCicloIluminacao.textContent = "Aguardando RTC";
+    elementos.estadoCicloIluminacao.textContent = "Ciclo indisponível";
     elementos.proximaAcaoIluminacao.textContent = "Programação indisponível";
     elementos.leituraCicloIluminacao.textContent = "Aguardando horário e ciclo completos do sistema.";
     elementos.barraCicloIluminacao.removeAttribute("aria-valuenow");
@@ -830,11 +799,13 @@ function atualizarCicloIluminacao(dadosHorta) {
     return;
   }
 
-  elementos.estadoCicloIluminacao.textContent = ciclo.ativo ? "Ciclo ativo" : "Em repouso";
+  elementos.estadoCicloIluminacao.textContent = ciclo.ativo ? "Período de luz" : "Período de descanso";
   elementos.proximaAcaoIluminacao.textContent = ciclo.ativo
-    ? `Desliga às ${fim}`
-    : `Liga às ${inicio}`;
-  elementos.leituraCicloIluminacao.textContent = dadosHorta.iluminacaoLigada
+    ? `Descanso às ${fim}`
+    : `Luz às ${inicio}`;
+  elementos.leituraCicloIluminacao.textContent = ciclo.usaRelogioLocal
+    ? `Programação diária: ${formatadorDecimal.format(ciclo.duracaoHoras)} h de luz, das ${inicio} às ${fim}. Horário do computador; o painel não aciona a lâmpada.`
+    : dadosHorta.iluminacaoLigada
     ? ciclo.ativo
       ? `Grow Light ligada. Desligamento programado para ${fim}.`
       : "Grow Light ligada fora do período programado; verifique o controle do circuito."
@@ -844,7 +815,7 @@ function atualizarCicloIluminacao(dadosHorta) {
   elementos.barraCicloIluminacao.setAttribute("aria-valuenow", String(Math.round(ciclo.progresso)));
   elementos.barraCicloIluminacao.setAttribute(
     "aria-valuetext",
-    `${Math.round(ciclo.progresso)} por cento do ciclo; RTC ${rtc}`,
+    `${Math.round(ciclo.progresso)} por cento do ciclo; ${referencia} ${horario}`,
   );
 }
 
@@ -1193,7 +1164,7 @@ function obterConfiguracaoDetalhes(tipo, dadosHorta) {
     ? formatadorHorario.format(dadosHorta.ultimaAtualizacao)
     : "Não informado";
   const bomba = dadosHorta.bombaLigada === true ? "Ligada" : "Desligada";
-  const iluminacao = dadosHorta.iluminacaoLigada === true ? "Ligada" : "Desligada";
+  const iluminacao = dadosHorta.iluminacaoLigada === null ? "Não informada" : dadosHorta.iluminacaoLigada ? "Ligada" : "Desligada";
   const limiteMinimo = obterConfiguracao("horta.limiteUmidadeMinima", 45);
   const limiteMaximo = obterConfiguracao("horta.limiteUmidadeMaxima", 72);
 
@@ -1219,21 +1190,21 @@ function obterConfiguracaoDetalhes(tipo, dadosHorta) {
   if (tipo === "iluminacao") {
     const ciclo = calcularCicloIluminacao(dadosHorta);
     return {
-      rotulo: "Automação temporal",
+      rotulo: "Programação diária",
       titulo: "Ciclo da Grow Light",
-      estado: dadosHorta.iluminacaoLigada ? "Grow Light ligada" : "Grow Light em repouso",
-      valor: dadosHorta.horarioRtc?.slice(0, 5) ?? "--:--",
-      unidade: " RTC",
-      descricao: ciclo.ativo
-        ? `Período de iluminação em andamento; término programado para ${dadosHorta.horarioIluminacaoFim}.`
-        : `Próxima ativação programada para ${dadosHorta.horarioIluminacaoInicio}.`,
+      estado: dadosHorta.iluminacaoLigada === null ? "Grow Light não informada" : dadosHorta.iluminacaoLigada ? "Grow Light ligada" : "Grow Light em repouso",
+      valor: ciclo.horario?.slice(0, 5) ?? "--:--",
+      unidade: ciclo.usaRelogioLocal ? " PC" : " RTC",
+      descricao: !ciclo.valido ? "Confira os horários de início e fim do ciclo." : ciclo.usaRelogioLocal
+        ? `Ciclo de ${formatadorDecimal.format(ciclo.duracaoHoras)} h de luz pelo relógio do computador. Esta programação é apenas visual e não aciona a lâmpada.`
+        : ciclo.ativo ? `Período de iluminação até ${ciclo.fim}.` : `Próximo período de iluminação às ${ciclo.inicio}.`,
       metricas: [
-        ["Ciclo", `${dadosHorta.horarioIluminacaoInicio} → ${dadosHorta.horarioIluminacaoFim}`],
+        ["Ciclo", `${ciclo.inicio} → ${ciclo.fim}`],
         ["Grow Light", iluminacao],
-        ["Próxima ação", ciclo.ativo ? `Desligar às ${dadosHorta.horarioIluminacaoFim}` : `Ligar às ${dadosHorta.horarioIluminacaoInicio}`],
+        ["Próximo período", !ciclo.valido ? "Não informado" : ciclo.ativo ? `Descanso às ${ciclo.fim}` : `Luz às ${ciclo.inicio}`],
       ],
       tituloVisual: "Posição no ciclo atual",
-      resumoVisual: ciclo.valido ? `${Math.round(ciclo.progresso)}% do período` : "RTC indisponível",
+      resumoVisual: ciclo.valido ? `${Math.round(ciclo.progresso)}% do período` : "Ciclo indisponível",
       valoresVisual: ciclo.valido ? [4, ciclo.progresso] : [],
     };
   }
@@ -1647,9 +1618,9 @@ function informarEstadoDaFonte(estadoRecebido) {
     comunicacao.transmissao,
   );
   mostrarAviso(
-    estaSincronizando
+    estadoRecebido?.mensagem || (estaSincronizando
       ? "O dispositivo foi encontrado. O painel aguarda um pacote completo e válido antes de confirmar a conexão."
-      : "A comunicação com a fonte de dados foi interrompida. Os valores permanecem visíveis, mas não estão sendo atualizados.",
+      : "A comunicação com a fonte de dados foi interrompida. Os valores permanecem visíveis, mas não estão sendo atualizados."),
   );
   atualizarPainelDetalhes();
 
@@ -1686,6 +1657,12 @@ function descreverTempoDecorrido(data) {
  * leituras antigas. Os sensores continuam sendo atualizados no ritmo da fonte.
  */
 function atualizarEstadoTemporal() {
+  // O ciclo local acompanha o relógio mesmo sem novas mensagens ou durante a
+  // pausa das leituras; isso não altera a telemetria nem seu horário de recepção.
+  if (dadosAtuais?.horarioRtc == null) {
+    atualizarCicloIluminacao(dadosAtuais ?? {});
+    if (estadoInteratividade.detalheAberto === "iluminacao") atualizarPainelDetalhes();
+  }
   if (!estadoComunicacao.ultimoPacoteRecebidoEm) {
     elementos.tempoRelativo.textContent = "Horário indisponível";
     return;

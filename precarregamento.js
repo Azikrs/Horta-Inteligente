@@ -5,6 +5,15 @@ const { contextBridge, ipcRenderer } = require("electron");
  * O renderer não recebe `ipcRenderer`, caminhos arbitrários nem acesso direto ao Node.js.
  */
 contextBridge.exposeInMainWorld("ponteHorta", {
+  serial: {
+    iniciar: () => ipcRenderer.invoke("serial:iniciar"),
+    aoEvento: (callback) => {
+      if (typeof callback !== "function") throw new TypeError("A leitura serial precisa receber uma função.");
+      const ouvinte = (_evento, dados) => callback(dados);
+      ipcRenderer.on("serial:evento", ouvinte);
+      return () => ipcRenderer.removeListener("serial:evento", ouvinte);
+    },
+  },
   configuracoes: {
     carregar: () => ipcRenderer.invoke("configuracoes:carregar"),
     salvar: (estadoCompleto) => ipcRenderer.invoke("configuracoes:salvar", estadoCompleto),

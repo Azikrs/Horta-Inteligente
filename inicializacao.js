@@ -239,6 +239,10 @@
     comunicacaoIniciada = estadosComComunicacao.has(estado);
 
     if (!introducaoConcluida) return;
+    if (["erro", "desconectado"].includes(estado)) {
+      definirEstadoVisual("aguardando", estadoRecebido?.mensagem || "Confira a conexão do Arduino.");
+      return;
+    }
     definirEstadoVisual(comunicacaoIniciada ? "sincronizando" : "aguardando");
   }
 

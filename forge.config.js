@@ -14,10 +14,13 @@ module.exports = {
       // A biblioteca musical é externa e nunca acompanha o executável.
       /^[/\\]musicas(?:[/\\]|$)/i,
       /^[/\\]ferramentas(?:[/\\]|$)/,
+      /^[/\\]testes(?:[/\\]|$)/,
       /^[/\\](?:README\.md|verificar-projeto\.js|\.gitignore|\.gitattributes)$/,
     ],
   },
-  rebuildConfig: {},
+  // SerialPort já inclui binários Node-API compatíveis com Node e Electron.
+  // Preservá-los evita exigir compilador C++ para iniciar o aplicativo.
+  rebuildConfig: { ignoreModules: ['@serialport/bindings-cpp'] },
   makers: [
     {
       name: '@electron-forge/maker-squirrel',

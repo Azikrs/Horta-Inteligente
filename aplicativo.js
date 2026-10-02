@@ -16,6 +16,7 @@ const { pathToFileURL } = require("node:url");
 const iniciouPorEventoSquirrel = require("electron-squirrel-startup");
 const { criarServicoConfiguracoes } = require("./configuracoes-aplicativo");
 const { criarServicoBiblioteca } = require("./biblioteca-musical");
+const { criarServicoSerial } = require("./serial-arduino");
 
 const ESQUEMA_APLICATIVO = "horta";
 const ORIGEM_APLICATIVO = `${ESQUEMA_APLICATIVO}://aplicativo`;
@@ -39,12 +40,14 @@ const arquivosPrivados = new Set([
   "precarregamento.js",
   "biblioteca-musical.js",
   "configuracoes-aplicativo.js",
+  "serial-arduino.js",
   "forge.config.js",
 ]);
 
 let janelaPrincipal = null;
 let servicoConfiguracoes = null;
 let servicoBiblioteca = null;
+let servicoSerial = null;
 let encerramentoSolicitado = false;
 let encerramentoLiberado = false;
 let encerramentoEmAndamento = false;
@@ -290,6 +293,7 @@ async function concluirEncerramentoSeguro() {
     Promise.allSettled([
       servicoBiblioteca?.finalizar?.(),
       servicoConfiguracoes?.finalizar?.(),
+      servicoSerial?.finalizar(),
     ]),
     new Promise((resolver) => {
       temporizadorLimite = setTimeout(resolver, 1500);
@@ -303,6 +307,7 @@ async function concluirEncerramentoSeguro() {
 }
 
 function registrarComunicacaoInterna() {
+  registrarManipuladorSeguro("serial:iniciar", () => servicoSerial.iniciar());
   registrarManipuladorSeguro("configuracoes:carregar", () => servicoConfiguracoes.carregar());
   registrarManipuladorSeguro("configuracoes:salvar", (estadoCompleto) => {
     if (!estadoCompleto || typeof estadoCompleto !== "object" || Array.isArray(estadoCompleto)) {
@@ -414,6 +419,7 @@ function criarJanelaPrincipal() {
   });
 
   janelaPrincipal.on("closed", () => {
+    void servicoSerial?.finalizar();
     clearTimeout(temporizadorEncerramento);
     temporizadorEncerramento = null;
     janelaPrincipal = null;
@@ -421,6 +427,13 @@ function criarJanelaPrincipal() {
 }
 
 async function prepararServicos() {
+  servicoSerial = criarServicoSerial({
+    publicar: (evento) => {
+      if (janelaPrincipal && !janelaPrincipal.isDestroyed()) {
+        janelaPrincipal.webContents.send("serial:evento", evento);
+      }
+    },
+  });
   const diretorioDados = app.getPath("userData");
   servicoConfiguracoes = criarServicoConfiguracoes(diretorioDados);
   await servicoConfiguracoes.inicializar();
@@ -462,6 +475,7 @@ function iniciarAplicativo() {
     // drenamos filas eventualmente concluídas sem bloquear o encerramento do Windows.
     void servicoBiblioteca?.finalizar();
     void servicoConfiguracoes?.finalizar();
+    void servicoSerial?.finalizar();
   });
 
   app.on("window-all-closed", () => {

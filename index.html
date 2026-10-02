@@ -553,7 +553,7 @@
                 </svg>
               </span>
               <span>
-                <small>Automação temporal</small>
+                <small>Programação diária</small>
                 <h3>Ciclo da Grow Light</h3>
               </span>
             </div>
@@ -581,7 +581,7 @@
               <small aria-hidden="true">→</small>
               <strong id="horario-fim-iluminacao">20:00</strong>
             </span>
-            <p><small>PRÓXIMA AÇÃO</small><strong id="proxima-acao-iluminacao">Aguardando RTC</strong></p>
+            <p><small>PRÓXIMO PERÍODO</small><strong id="proxima-acao-iluminacao">Luz às 08:00</strong></p>
           </div>
 
           <div
@@ -596,9 +596,9 @@
             <span id="preenchimento-ciclo-iluminacao"><i id="marcador-rtc-iluminacao"></i></span>
           </div>
           <div class="legenda-progresso">
-            <span id="legenda-inicio-iluminacao">08:00</span><span id="horario-rtc-iluminacao">RTC --:--:--</span><span id="legenda-fim-iluminacao">20:00</span>
+            <span id="legenda-inicio-iluminacao">08:00</span><span id="horario-rtc-iluminacao">Computador --:--:--</span><span id="legenda-fim-iluminacao">20:00</span>
           </div>
-          <p class="leitura-contextual" id="leitura-ciclo-iluminacao">Aguardando a programação enviada pelo sistema.</p>
+          <p class="leitura-contextual" id="leitura-ciclo-iluminacao">12 h de luz por dia, das 08:00 às 20:00. Programação visual pelo relógio do computador.</p>
         </article>
 
         <article class="cartao cartao-arduino" id="cartao-arduino" data-conexao="conectando">
@@ -1273,7 +1273,7 @@
 
             <section class="painel-configuracao" data-painel-configuracao="horta" hidden>
               <header><p>06 / HORTA</p><h3>Preparada para a automação real.</h3><span>Valores organizados para a futura camada Serial.</span></header>
-              <div class="aviso-integracao-horta"><span>FUTURA INTEGRAÇÃO SERIAL</span><p>Nenhum controle abaixo envia comandos ao circuito nesta etapa.</p></div>
+              <div class="aviso-integracao-horta"><span>MONITORAMENTO DO ARDUINO</span><p>Os ajustes abaixo são locais e não enviam comandos ao circuito. Os limites da bomba permanecem definidos no código do Arduino.</p></div>
               <article class="grupo-configuracoes">
                 <label class="item-configuracao item-configuracao--campo" data-termos="nome planta cultivo"><span><strong>Nome da planta</strong><small>Identificação do cultivo.</small></span><input type="text" maxlength="40" value="Cultivo principal" data-configuracao="horta.nomePlanta" /></label>
                 <div class="linha-campos-configuracao item-configuracao" data-termos="umidade limite mínimo máximo"><label><span>Umidade mínima (%)</span><input type="number" min="0" max="100" value="45" data-tipo-configuracao="numero" data-configuracao="horta.limiteUmidadeMinima" /></label><label><span>Umidade máxima (%)</span><input type="number" min="0" max="100" value="72" data-tipo-configuracao="numero" data-configuracao="horta.limiteUmidadeMaxima" /></label></div>
@@ -1337,10 +1337,12 @@
 
     <script src="configuracoes.js"></script>
     <script src="simulador.js"></script>
+    <script src="fonte-serial.js"></script>
     <script src="sons.js"></script>
     <script src="interface-sistema.js"></script>
     <script src="estacao.js"></script>
     <script src="inicializacao.js"></script>
+    <script src="ciclo-iluminacao.js"></script>
     <script src="principal.js"></script>
   </body>
 </html>
