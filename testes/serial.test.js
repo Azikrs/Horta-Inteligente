@@ -18,6 +18,27 @@ test("interpreta o firmware real sem inventar iluminação ou RTC", () => {
   assert.equal(interpretarLinhaArduino(linha.replace("108", "-32768"), "COM7").numeroLeitura, -32768);
 });
 
+test("interpreta o formato textual observado no Arduino Uno em COM3", () => {
+  const recebida = "BOMBA = DESLIGADA; UMIDADE = 99%; BRUTO = 1014; LEITURAS = 4\r";
+  const dados = interpretarLinhaArduino(recebida, "COM3");
+  assert.equal(dados.bombaLigada, false);
+  assert.equal(dados.umidadeSolo, 99);
+  assert.equal(dados.valorBrutoSensor, 1014);
+  assert.equal(dados.numeroLeitura, 4);
+  assert.equal(dados.estadoArduino.porta, "COM3");
+  assert.equal(interpretarLinhaArduino(recebida.replace("DESLIGADA", "LIGADA"), "COM3").bombaLigada, true);
+  assert.equal(interpretarLinhaArduino("LEITURAS = 5; BOMBA = 0; BRUTO = 770; UMIDADE = 75%", "COM3").bombaLigada, false);
+});
+
+test("ignora o scanner I2C e rejeita estado de bomba ausente ou ambíguo", () => {
+  for (const invalida of [
+    "Procurando dispositivos I2C...", "Dispositivo encontrado: 0x27", "Busca finalizada!",
+    "; UMIDADE = 75%; BRUTO = 770; LEITURAS = 5",
+    "BOMBA = DESLIGADA; UMIDADE = 75%; BRUTO = 770; BOMBA = LIGADA",
+    "BOMBA = DESCONHECIDA; UMIDADE = 75%; BRUTO = 770; LEITURAS = 5",
+  ]) assert.equal(interpretarLinhaArduino(invalida, "COM3"), null);
+});
+
 test("descarta mensagens incompletas, corrompidas e fora da faixa", () => {
   for (const invalida of ["", "UMIDBOMBA = 1; LEITURAS = 104", linha.slice(0, 28), linha.replace("40%", "140%"), linha.replace("416", "1024"), linha.replace("BOMBA = 1", "BOMBA = 2"), `${linha}; LIXO`, linha.replace("108", "999999999999999999999")]) {
     assert.equal(interpretarLinhaArduino(invalida, "COM7"), null);
@@ -49,6 +70,20 @@ test("remonta fragmentos, separa rajadas e limita linhas sem delimitador", async
   assert.deepEqual(eventos.filter((e) => e.tipo === "leitura").map((e) => e.dados.numeroLeitura), [108, 109, 110]);
   await servico.finalizar();
   assert.equal(portas[0].isOpen, false);
+});
+
+test("sincroniza com mensagens textuais fragmentadas após o scanner I2C", async () => {
+  const { portas, eventos, servico } = prepararServico();
+  servico.iniciar();
+  try {
+    portas[0].emit("data", Buffer.from("Procurando dispositivos I2C...\r\nDispositivo encontrado: 0x27\r\nBusca finalizada!\r\n"));
+    assert.equal(eventos.filter(e => e.tipo === "leitura").length, 0);
+    const mensagem = "BOMBA = DESLIGADA; UMIDADE = 99%; BRUTO = 1014; LEITURAS = 4\r\n";
+    for (let i = 0; i < mensagem.length; i += 4) portas[0].emit("data", Buffer.from(mensagem.slice(i, i + 4)));
+    assert.equal(eventos.filter(e => e.tipo === "leitura").length, 1);
+    assert.equal(eventos.at(-1).dados.bombaLigada, false);
+    assert.ok(eventos.some(e => e.dados.estado === "conectado"));
+  } finally { await servico.finalizar(); }
 });
 
 test("reconecta após desconectar e cancela tentativas ao encerrar", async () => {

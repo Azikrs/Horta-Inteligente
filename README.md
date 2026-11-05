@@ -39,6 +39,16 @@ Execute `npm.cmd start` com o Arduino conectado. O aplicativo procura automatica
 UMIDADE = 40%; BRUTO = 416; BOMBA = 1; LEITURAS = 108
 ```
 
+O aplicativo também aceita o formato textual da placa, com os campos em outra ordem:
+
+```text
+BOMBA = DESLIGADA; UMIDADE = 99%; BRUTO = 1014; LEITURAS = 4
+```
+
+`BOMBA` aceita `0`/`1` ou `DESLIGADA`/`LIGADA`. As mensagens do scanner I2C são ignoradas. Os quatro campos devem estar presentes, sem repetições.
+
+O sketch em `arduino/Horta_Codigo/Horta_Codigo.ino` corrige a ausência do campo `BOMBA` entre 70% e 80% no código original. Mantém os pinos, os limites, o relé ativo em LOW e o intervalo de 4 segundos; passa a informar o estado da saída em toda leitura. Para aplicar essa correção na placa, feche o aplicativo, abra esse sketch na Arduino IDE, selecione Arduino Uno e a porta reconhecida pelo Windows e envie o código. Feche o Monitor Serial antes de iniciar o aplicativo novamente. Alterar o arquivo `.ino` no computador não atualiza automaticamente a placa.
+
 O painel mostra umidade, valor bruto, estado da saída da bomba, contador e histórico. A porcentagem é exibida exatamente como enviada pelo Arduino. Os ajustes locais não alteram os limites de acionamento definidos no firmware (liga abaixo de 70%, desliga acima de 80%).
 
 O cartão da Grow Light mostra a programação diária de **08:00 a 20:00**: 12 horas de luz e 12 horas de descanso. Quando o Arduino não envia RTC, o painel usa o horário local do computador e atualiza o ciclo a cada segundo, inclusive durante pausas ou interrupções na serial. Os horários podem ser ajustados em **Configurações → Horta**. Essa programação é apenas visual: não envia comandos à lâmpada. O estado físico da Grow Light continua como não informado até existir telemetria correspondente. Se a fonte enviar RTC e horários de iluminação, esses dados têm prioridade na exibição.

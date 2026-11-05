@@ -5,14 +5,33 @@ const { SerialPort } = require("serialport");
 // O firmware informa somente estes quatro campos. Ausência de RTC ou Grow Light
 // não pode ser preenchida com valores simulados ou com o relógio do computador.
 function interpretarLinhaArduino(linha, porta) {
-  const campos = /^UMIDADE\s*=\s*(\d+)%;\s*BRUTO\s*=\s*(\d+);\s*BOMBA\s*=\s*([01]);\s*LEITURAS\s*=\s*(-?\d+)\s*$/.exec(linha.trim());
-  if (!campos) return null;
-  const [, umidade, bruto, bomba, leitura] = campos.map(Number);
+  // As versões da placa mudam a ordem dos campos e usam 0/1 ou
+  // LIGADA/DESLIGADA para a bomba. Exige os quatro campos, sem duplicatas.
+  const formatos = {
+    UMIDADE: /^(\d+)%$/,
+    BRUTO: /^\d+$/,
+    BOMBA: /^(?:[01]|LIGADA|DESLIGADA)$/,
+    LEITURAS: /^-?\d+$/,
+  };
+  const campos = new Map();
+  const partes = linha.trim().split(";");
+  if (partes.length !== 4) return null;
+  for (const parte of partes) {
+    const campo = /^\s*(UMIDADE|BRUTO|BOMBA|LEITURAS)\s*=\s*(\S+)\s*$/.exec(parte);
+    if (!campo) return null;
+    const [, nome, valor] = campo;
+    if (campos.has(nome) || !formatos[nome].test(valor)) return null;
+    campos.set(nome, valor);
+  }
+  const umidade = Number(campos.get("UMIDADE").slice(0, -1));
+  const bruto = Number(campos.get("BRUTO"));
+  const bomba = campos.get("BOMBA");
+  const leitura = Number(campos.get("LEITURAS"));
   if (umidade > 100 || bruto > 1023 || !Number.isSafeInteger(leitura)) return null;
   return {
     umidadeSolo: umidade,
     valorBrutoSensor: bruto,
-    bombaLigada: bomba === 1,
+    bombaLigada: bomba === "1" || bomba === "LIGADA",
     iluminacaoLigada: null,
     horarioRtc: null,
     horarioIluminacaoInicio: null,
